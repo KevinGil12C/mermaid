@@ -2,14 +2,14 @@
 
 # OpenMermaid Studio
 
-**Editor de diagramas [Mermaid](https://mermaid.js.org/) con estilizado cromático algorítmico, 100 % en el navegador.**
+**Editor de diagramas Mermaid con estilizado cromático algorítmico, 100 % en el navegador.**
 
 Sin servidor · Sin *build tools* · Sin inteligencia artificial · Privacidad total
 
 [![Licencia: MIT](https://img.shields.io/badge/licencia-MIT-2ea44f.svg)](./LICENSE)
 [![Build: ninguno](https://img.shields.io/badge/build-ninguno-blue.svg)](#primeros-pasos)
 [![Vanilla JS](https://img.shields.io/badge/JavaScript-vanilla-f7df1e.svg?logo=javascript&logoColor=black)](#stack-tecnológico)
-[![Mermaid 12](https://img.shields.io/badge/Mermaid-12-ff3670.svg)](https://mermaid.js.org/)
+[![Mermaid 12](https://img.shields.io/badge/Mermaid-12-ff3670.svg)](#stack-tecnológico)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#contribuir)
 [![Sin IA](https://img.shields.io/badge/IA-0%25-8a2be2.svg)](#descripción)
 
@@ -44,7 +44,7 @@ Cero instalación: abre `index.html` y empieza a diagramar.
 ## Descripción
 
 **OpenMermaid Studio** es una aplicación de página única (SPA) que permite escribir diagramas
-[Mermaid](https://mermaid.js.org/) y verlos renderizados en tiempo real, con un **motor de color
+Mermaid y verlos renderizados en tiempo real, con un **motor de color
 propio** que genera paletas armónicas y accesibles (WCAG 2.1 AA) sin recurrir a ningún servicio
 externo ni modelo de lenguaje.
 
@@ -120,7 +120,7 @@ El proyecto persigue tres objetivos:
 | Interfaz | HTML5 semántico + [Bootstrap 5.3.3](https://getbootstrap.com/) (tema claro/oscuro vía `data-bs-theme`) |
 | Iconografía | [Material Symbols Outlined](https://fonts.google.com/icons) |
 | Tipografías | [Inter](https://fonts.google.com/specimen/Inter) (UI) · [JetBrains Mono](https://fonts.google.com/specimen/JetBrains+Mono) (código) |
-| Render de diagramas | [Mermaid 12](https://mermaid.js.org/) |
+| Render de diagramas | Mermaid 12 |
 | Diálogos y avisos | [SweetAlert2 v11](https://sweetalert2.github.io/) |
 | PDF | [jsPDF 2.5.1](https://github.com/parallax/jsPDF) |
 | Lógica | JavaScript **vanilla** (ES2020), patrón IIFE sobre `window.OpenMermaidStudio` |
