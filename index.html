@@ -1,11 +1,56 @@
 <!DOCTYPE html>
 <html lang="es" data-bs-theme="dark">
 <head>
+  <!-- ========================================================================
+       Codificación, viewport y compatibilidad
+       ======================================================================== -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="OpenMermaid Studio: editor de diagramas Mermaid 100% client-side con sistema de archivos local, estilizado cromático algorítmico, exportación múltiple y documentación técnica integrada. Sin IA, sin backend." />
-  <meta name="theme-color" content="#0b0e14" />
-  <title>OpenMermaid Studio</title>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+
+  <!-- ========================================================================
+       SEO primario
+       Sustituye https://mermaid-pi.vercel.app por tu dominio real si cambia.
+       ======================================================================== -->
+  <title>OpenMermaid Studio — Editor y Exportador de Diagramas Mermaid Gratuito y Open Source</title>
+  <meta name="description" content="Editor de diagramas Mermaid gratuito y open source, 100 % en el navegador. Sin registro ni IA: crea, estiliza y exporta a SVG, PNG y PDF en alta resolución." />
+  <meta name="keywords" content="editor mermaid, diagramas mermaid, mermaid online, flowchart, diagrama de flujo, exportar svg, exportar png, exportar pdf, open source, sin registro" />
+  <meta name="author" content="KevinGil12C" />
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+  <meta name="googlebot" content="index, follow, max-image-preview:large" />
+  <link rel="canonical" href="https://mermaid-pi.vercel.app/" />
+
+  <!-- ========================================================================
+       Open Graph (WhatsApp, Telegram, Facebook, LinkedIn)
+       Se usan URL absolutas: WhatsApp ignora las rutas relativas.
+       ======================================================================== -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="OpenMermaid Studio" />
+  <meta property="og:title" content="OpenMermaid Studio — Editor y Exportador de Diagramas Mermaid Gratuito y Open Source" />
+  <meta property="og:description" content="Crea y exporta diagramas Mermaid en SVG, PNG y PDF desde el navegador. Sin registro, sin IA y 100 % client-side." />
+  <meta property="og:url" content="https://mermaid-pi.vercel.app/" />
+  <meta property="og:image" content="https://mermaid-pi.vercel.app/assets/og-image.png" />
+  <meta property="og:image:secure_url" content="https://mermaid-pi.vercel.app/assets/og-image.png" />
+  <meta property="og:image:type" content="image/png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="OpenMermaid Studio: editor de diagramas Mermaid gratuito, sin registro y 100 % en el navegador" />
+  <meta property="og:locale" content="es_ES" />
+  <meta property="og:locale:alternate" content="es_MX" />
+  <meta property="og:locale:alternate" content="en_US" />
+
+  <!-- ========================================================================
+       Twitter / X Card
+       ======================================================================== -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="OpenMermaid Studio — Editor y Exportador de Diagramas Mermaid Gratuito y Open Source" />
+  <meta name="twitter:description" content="Crea y exporta diagramas Mermaid en SVG, PNG y PDF desde el navegador. Sin registro, sin IA y 100 % client-side." />
+  <meta name="twitter:image" content="https://mermaid-pi.vercel.app/assets/og-image.png" />
+  <meta name="twitter:image:alt" content="OpenMermaid Studio: editor de diagramas Mermaid gratuito y open source" />
+  <meta name="twitter:url" content="https://mermaid-pi.vercel.app/" />
+  <!-- Descomenta y ajusta si tienes cuenta de X/Twitter:
+  <meta name="twitter:site" content="@tu_usuario" />
+  <meta name="twitter:creator" content="@tu_usuario" /> -->
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -15,8 +60,69 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
   <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet" />
   <link href="css/styles.css" rel="stylesheet" />
-  <!--ico-->
-  <link rel="icon" type="image/x-icon" href="img/favicon.ico" />
+
+  <!-- ========================================================================
+       Favicons, PWA y color de tema
+       ======================================================================== -->
+  <link rel="icon" href="/img/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/icon-192.png" />
+  <link rel="icon" type="image/png" sizes="512x512" href="/assets/icon-512.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png" />
+  <link rel="manifest" href="/site.webmanifest" />
+  <meta name="theme-color" content="#0b0e14" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#f8fafc" media="(prefers-color-scheme: light)" />
+  <meta name="color-scheme" content="dark light" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="OpenMermaid" />
+
+  <!-- ========================================================================
+       Datos estructurados (Schema.org / JSON-LD)
+       Ayuda a Google a interpretar la app como software gratuito y open source.
+       ======================================================================== -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "OpenMermaid Studio",
+    "alternateName": ["OpenMermaid", "Open Mermaid Studio"],
+    "url": "https://mermaid-pi.vercel.app/",
+    "description": "Editor y exportador de diagramas Mermaid gratuito y open source, 100 % en el navegador. Sin registro ni IA: crea, estiliza y exporta a SVG, PNG y PDF en alta resolución.",
+    "applicationCategory": "DeveloperApplication",
+    "applicationSubCategory": "DesignApplication",
+    "operatingSystem": "All (Web Browser)",
+    "browserRequirements": "Requiere un navegador moderno con JavaScript habilitado (Chrome, Edge, Firefox o Safari).",
+    "inLanguage": "es",
+    "isAccessibleForFree": true,
+    "softwareVersion": "1.0",
+    "license": "https://opensource.org/licenses/MIT",
+    "image": "https://mermaid-pi.vercel.app/assets/og-image.png",
+    "screenshot": "https://mermaid-pi.vercel.app/assets/og-image.png",
+    "offers": {
+      "@type": "Offer",
+      "price": "0.00",
+      "priceCurrency": "USD",
+      "availability": "https://schema.org/InStock"
+    },
+    "featureList": [
+      "Editor de diagramas Mermaid en vivo",
+      "Exportación a SVG, PNG (1x-4x) y PDF en alta resolución",
+      "Sistema de archivos local con historial de versiones",
+      "Estilizado cromático algorítmico accesible (WCAG 2.1 AA)",
+      "100 % client-side: sin registro, sin backend y sin inteligencia artificial",
+      "Portal de documentación y atajos de teclado integrados"
+    ],
+    "keywords": "editor mermaid, diagramas mermaid, mermaid online, flowchart, diagrama de flujo, exportar svg, exportar png, exportar pdf, open source",
+    "author": {
+      "@type": "Person",
+      "name": "KevinGil12C"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "OpenMermaid Studio"
+    }
+  }
+  </script>
 </head>
 <body>
 

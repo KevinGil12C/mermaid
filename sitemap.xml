@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  sitemap.xml — OpenMermaid Studio
+  SPA de una sola vista: el editor vive en la raíz del dominio.
+  Sustituye https://mermaid-pi.vercel.app si cambias de subdominio.
+-->
+<urlset
+  xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+  xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+
+  <url>
+    <loc>https://mermaid-pi.vercel.app/</loc>
+    <lastmod>2026-10-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://mermaid-pi.vercel.app/assets/og-image.png</image:loc>
+      <image:title>OpenMermaid Studio — Editor de diagramas Mermaid</image:title>
+    </image:image>
+  </url>
+
+</urlset>

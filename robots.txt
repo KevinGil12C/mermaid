@@ -1,0 +1,30 @@
+# robots.txt — OpenMermaid Studio
+# Editor de diagramas Mermaid 100 % cliente · https://mermaid-pi.vercel.app
+# Documentación: https://developers.google.com/search/docs/crawling-indexing/robots/intro
+
+# ------------------------------------------------------------------
+# Rastreo general: se permite todo el contenido público de la SPA.
+# CSS y JS se dejan rastreables a propósito: Google los necesita para
+# renderizar la interfaz y evaluar la página (mobile-first indexing).
+# ------------------------------------------------------------------
+User-agent: *
+Allow: /
+Disallow: /__pycache__/
+Disallow: /*.py$
+
+# ------------------------------------------------------------------
+# Directivas explícitas para buscadores principales
+# ------------------------------------------------------------------
+User-agent: Googlebot
+Allow: /
+
+User-agent: Googlebot-Image
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+# ------------------------------------------------------------------
+# Sitemap (URL absoluta obligatoria)
+# ------------------------------------------------------------------
+Sitemap: https://mermaid-pi.vercel.app/sitemap.xml
