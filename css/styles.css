@@ -1,0 +1,1679 @@
+/**
+ * OpenMermaid Studio - Hoja de estilos propia.
+ *
+ * Se apoya en Bootstrap 5 para la retícula, botones, modales y pestañas, y se
+ * apoya en las variables nativas de Bootstrap ([data-bs-theme]) para los dos
+ * temas. Aquí se definen únicamente los componentes propios del producto:
+ * layout de trabajo, explorador de archivos, editor con numeración de líneas,
+ * divisor redimensionable, lienzo con controles flotantes y el portal de
+ * documentación técnica.
+ */
+
+/* ==========================================================================
+   1. Variables propias complementarias a los tokens de Bootstrap
+   ========================================================================== */
+:root {
+  --oms-superficie: var(--bs-body-bg);
+  --oms-superficie-alt: var(--bs-tertiary-bg);
+  --oms-borde: var(--bs-border-color);
+  --oms-texto-suave: var(--bs-secondary-color);
+  --oms-lienzo-cuadricula: rgba(148, 163, 184, 0.16);
+  --oms-radio: 0.55rem;
+  --oms-sombra-suave: 0 1px 2px rgba(0, 0, 0, 0.18);
+  --oms-sombra-media: 0 10px 30px rgba(0, 0, 0, 0.28);
+  --oms-ancho-sidebar: 16rem;
+  --oms-ancho-panel-editor: 40%;
+  --oms-editor-alto-linea: 1.5rem;
+  --oms-editor-tamano-fuente: 0.875rem;
+  --oms-editor-padding-vertical: 0.75rem;
+}
+
+[data-bs-theme='light'] {
+  --oms-lienzo-cuadricula: rgba(31, 36, 48, 0.08);
+  --oms-sombra-suave: 0 1px 2px rgba(16, 24, 40, 0.08);
+  --oms-sombra-media: 0 10px 30px rgba(16, 24, 40, 0.16);
+}
+
+/* ==========================================================================
+   2. Estructura general
+   ========================================================================== */
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  font-size: 1.25rem;
+  line-height: 1;
+  vertical-align: middle;
+  user-select: none;
+}
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* ==========================================================================
+   3. Barra superior
+   ========================================================================== */
+.oms-navbar {
+  background: var(--bs-body-bg);
+  border-bottom: 1px solid var(--oms-borde);
+  box-shadow: var(--oms-sombra-suave);
+  flex: 0 0 auto;
+  z-index: 1030;
+}
+
+.oms-navbar .navbar-brand {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.oms-navbar .navbar-brand .material-symbols-outlined {
+  color: var(--bs-primary);
+}
+
+.oms-boton-barra {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--bs-body-color);
+  border-radius: var(--oms-radio);
+  padding: 0.4rem 0.6rem;
+  font-size: 0.875rem;
+  line-height: 1;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.oms-boton-barra:hover,
+.oms-boton-barra:focus-visible {
+  background: var(--oms-superficie-alt);
+  border-color: var(--oms-borde);
+}
+
+.oms-boton-barra .material-symbols-outlined {
+  font-size: 1.15rem;
+}
+
+.boton-documentacion {
+  border-color: var(--bs-primary);
+  color: var(--bs-primary);
+}
+
+.oms-menu {
+  background: var(--bs-body-bg);
+  border: 1px solid var(--oms-borde);
+  box-shadow: var(--oms-sombra-media);
+  border-radius: var(--oms-radio);
+  min-width: 16rem;
+}
+
+.oms-menu .dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 0.35rem;
+}
+
+.oms-menu .dropdown-item .material-symbols-outlined {
+  font-size: 1.1rem;
+  color: var(--oms-texto-suave);
+}
+
+.oms-menu .dropdown-header {
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+}
+
+.oms-etiqueta-control {
+  color: var(--oms-texto-suave);
+  font-size: 0.75rem;
+  margin-bottom: 0.15rem;
+}
+
+.entrada-color {
+  width: 2.6rem;
+  height: 2.1rem;
+  padding: 0.15rem;
+  cursor: pointer;
+}
+
+.muestra-paleta {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  border-radius: 0.4rem;
+  overflow: hidden;
+  border: 1px solid var(--oms-borde);
+  height: 2rem;
+}
+
+.muestra-paleta__color {
+  width: 100%;
+  height: 100%;
+}
+
+/* ==========================================================================
+   4. Área de trabajo
+   ========================================================================== */
+.workspace {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* ---- Explorador de archivos ---- */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 var(--oms-ancho-sidebar);
+  width: var(--oms-ancho-sidebar);
+  background: var(--oms-superficie-alt);
+  border-right: 1px solid var(--oms-borde);
+  overflow: hidden;
+  transition: flex-basis 0.18s ease, width 0.18s ease;
+}
+
+.sidebar.colapsado {
+  flex-basis: 0;
+  width: 0;
+  border-right: 0;
+}
+
+.sidebar__cabecera {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.65rem;
+  border-bottom: 1px solid var(--oms-borde);
+  min-height: 2.75rem;
+}
+
+.sidebar__titulo {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--oms-texto-suave);
+}
+
+.sidebar__acciones {
+  display: flex;
+  gap: 0.25rem;
+  margin-left: auto;
+}
+
+.arbol {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 0.4rem;
+}
+
+.arbol-carpeta {
+  margin-bottom: 0.15rem;
+}
+
+.arbol-carpeta__cabecera,
+.arbol-archivo {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.32rem 0.45rem;
+  border-radius: 0.4rem;
+  cursor: pointer;
+  color: var(--bs-body-color);
+  font-size: 0.85rem;
+  user-select: none;
+}
+
+.arbol-carpeta__cabecera:hover,
+.arbol-archivo:hover {
+  background: color-mix(in srgb, var(--bs-primary) 12%, transparent);
+}
+
+.arbol-carpeta__cabecera .material-symbols-outlined {
+  color: #e0a942;
+  font-size: 1.15rem;
+}
+
+.arbol-archivo .material-symbols-outlined {
+  color: var(--oms-texto-suave);
+  font-size: 1.1rem;
+}
+
+.arbol-archivo.activo {
+  background: color-mix(in srgb, var(--bs-primary) 20%, transparent);
+  font-weight: 600;
+}
+
+.arbol-archivo.activo .material-symbols-outlined {
+  color: var(--bs-primary);
+}
+
+.arbol__nombre {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.arbol__acciones {
+  display: flex;
+  gap: 0.1rem;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.arbol-carpeta__cabecera:hover .arbol__acciones,
+.arbol-archivo:hover .arbol__acciones,
+.arbol-archivo.activo .arbol__acciones {
+  opacity: 1;
+}
+
+.boton-arbol {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 0;
+  background: transparent;
+  color: var(--oms-texto-suave);
+  border-radius: 0.3rem;
+}
+
+.boton-arbol:hover {
+  background: color-mix(in srgb, var(--bs-primary) 22%, transparent);
+  color: var(--bs-primary);
+}
+
+.boton-arbol .material-symbols-outlined {
+  font-size: 0.95rem;
+}
+
+.arbol-carpeta__hijos {
+  margin-left: 0.9rem;
+  border-left: 1px dashed var(--oms-borde);
+  padding-left: 0.35rem;
+}
+
+.arbol-carpeta.oculta .arbol-carpeta__hijos {
+  display: none;
+}
+
+.arbol-vacio {
+  font-size: 0.78rem;
+  color: var(--oms-texto-suave);
+  padding: 0.3rem 0.6rem;
+  font-style: italic;
+}
+
+/* ---- Panel del editor ---- */
+.panel-editor {
+  display: flex;
+  flex-direction: column;
+  width: var(--oms-ancho-panel-editor);
+  min-width: 260px;
+  max-width: 75%;
+  background: var(--bs-body-bg);
+}
+
+.panel-lienzo {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  background: var(--oms-superficie-alt);
+  position: relative;
+}
+
+.encabezado-panel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--oms-borde);
+  background: var(--oms-superficie-alt);
+  flex: 0 0 auto;
+  min-height: 2.75rem;
+}
+
+.encabezado-panel__titulo {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--oms-texto-suave);
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.grupo-estadisticas {
+  display: flex;
+  gap: 0.75rem;
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--oms-texto-suave);
+}
+
+.estadistica {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  white-space: nowrap;
+}
+
+.estadistica .material-symbols-outlined {
+  font-size: 0.95rem;
+}
+
+/* ==========================================================================
+   5. Editor de código
+   ========================================================================== */
+.contenedor-editor {
+  flex: 1 1 auto;
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.numeros-linea {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: var(--oms-editor-padding-vertical) 0.5rem var(--oms-editor-padding-vertical) 0.75rem;
+  text-align: right;
+  color: var(--oms-texto-suave);
+  background: var(--oms-superficie-alt);
+  border-right: 1px solid var(--oms-borde);
+  font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  font-size: var(--oms-editor-tamano-fuente);
+  line-height: var(--oms-editor-alto-linea);
+  overflow: hidden;
+  user-select: none;
+}
+
+.editor-codigo {
+  flex: 1 1 auto;
+  border: 0;
+  outline: none;
+  resize: none;
+  width: 100%;
+  height: 100%;
+  padding: var(--oms-editor-padding-vertical) 0.85rem;
+  background: var(--bs-body-bg);
+  color: var(--bs-body-color);
+  font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  font-size: var(--oms-editor-tamano-fuente);
+  line-height: var(--oms-editor-alto-linea);
+  tab-size: 4;
+  white-space: pre;
+  overflow: auto;
+}
+
+/* ==========================================================================
+   6. Divisor redimensionable
+   ========================================================================== */
+.separador-paneles {
+  flex: 0 0 6px;
+  cursor: col-resize;
+  background: var(--oms-borde);
+  position: relative;
+  transition: background 0.15s ease;
+  z-index: 5;
+}
+
+.separador-paneles:hover,
+.separador-paneles.arrastrando {
+  background: var(--bs-primary);
+}
+
+.separador-paneles::after {
+  content: '';
+  position: absolute;
+  inset: 40% 2px;
+  border-radius: 2px;
+  background: var(--oms-texto-suave);
+  opacity: 0.4;
+}
+
+/* ==========================================================================
+   7. Lienzo interactivo
+   ========================================================================== */
+.lienzo {
+  position: relative;
+  flex: 1 1 auto;
+  overflow: hidden;
+  cursor: grab;
+  background-color: var(--oms-superficie-alt);
+  background-image:
+    linear-gradient(var(--oms-lienzo-cuadricula) 1px, transparent 1px),
+    linear-gradient(90deg, var(--oms-lienzo-cuadricula) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.lienzo.paneando {
+  cursor: grabbing;
+}
+
+.contenido-lienzo {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+}
+
+.contenido-lienzo svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none !important;
+  transform-origin: 0 0;
+  will-change: transform;
+  shape-rendering: geometricPrecision;
+  text-rendering: geometricPrecision;
+}
+
+.controles-flotantes-lienzo {
+  position: absolute;
+  right: 1rem;
+  bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.4rem;
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--bs-body-bg) 88%, transparent);
+  border: 1px solid var(--oms-borde);
+  box-shadow: var(--oms-sombra-media);
+  backdrop-filter: blur(6px);
+  z-index: 6;
+}
+
+.boton-flotante {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.15rem;
+  height: 2.15rem;
+  border: 1px solid transparent;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--bs-body-color);
+  transition: background 0.15s ease;
+}
+
+.boton-flotante:hover {
+  background: color-mix(in srgb, var(--bs-primary) 18%, transparent);
+  color: var(--bs-primary);
+}
+
+.indicador-zoom {
+  font-size: 0.72rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--oms-texto-suave);
+}
+
+.indicador-zoom--flotante {
+  padding: 0.1rem 0;
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   8. Estados del lienzo
+   ========================================================================== */
+.superposicion-lienzo {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 0.5rem;
+  padding: 2rem;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.superposicion-lienzo[hidden] {
+  display: none;
+}
+
+.estado-vacio {
+  color: var(--oms-texto-suave);
+}
+
+.estado-vacio .material-symbols-outlined {
+  font-size: 2.5rem;
+}
+
+.estado-error {
+  background: color-mix(in srgb, var(--bs-danger) 10%, transparent);
+  align-items: stretch;
+  justify-content: flex-start;
+  pointer-events: auto;
+}
+
+.tarjeta-error {
+  background: var(--bs-body-bg);
+  border: 1px solid var(--bs-danger);
+  border-radius: var(--oms-radio);
+  box-shadow: var(--oms-sombra-media);
+  padding: 1rem 1.25rem;
+  text-align: left;
+  max-width: 38rem;
+  margin: auto;
+}
+
+.tarjeta-error__titulo {
+  color: var(--bs-danger);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.4rem;
+}
+
+.tarjeta-error__detalle {
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 0.8rem;
+  white-space: pre-wrap;
+  margin: 0;
+  max-height: 45vh;
+  overflow: auto;
+}
+
+/* ==========================================================================
+   9. Barra de estado
+   ========================================================================== */
+.barra-estado {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.3rem 0.9rem;
+  font-size: 0.75rem;
+  color: var(--oms-texto-suave);
+  background: var(--oms-superficie-alt);
+  border-top: 1px solid var(--oms-borde);
+}
+
+.barra-estado__elemento {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.punto-estado {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: var(--oms-texto-suave);
+}
+
+.punto-estado.exito { background: var(--bs-success); }
+.punto-estado.error { background: var(--bs-danger); }
+.punto-estado.procesando { background: var(--bs-warning); }
+
+/* ==========================================================================
+   10. Botones de herramienta y galería de plantillas
+   ========================================================================== */
+.boton-herramienta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--oms-borde);
+  background: var(--bs-body-bg);
+  color: var(--bs-body-color);
+  border-radius: 0.4rem;
+  transition: background 0.15s ease;
+}
+
+.boton-herramienta:hover {
+  background: var(--oms-superficie-alt);
+}
+
+.boton-herramienta .material-symbols-outlined {
+  font-size: 1.1rem;
+}
+
+.galeria-plantillas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
+  gap: 0.85rem;
+}
+
+.tarjeta-plantilla {
+  border: 1px solid var(--oms-borde);
+  border-radius: var(--oms-radio);
+  background: var(--oms-superficie-alt);
+  padding: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.tarjeta-plantilla:hover,
+.tarjeta-plantilla:focus-visible {
+  transform: translateY(-2px);
+  border-color: var(--bs-primary);
+  box-shadow: var(--oms-sombra-media);
+}
+
+.tarjeta-plantilla__icono {
+  color: var(--bs-primary);
+  font-size: 1.75rem;
+}
+
+.tarjeta-plantilla__nombre {
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin: 0.35rem 0 0.15rem;
+}
+
+.tarjeta-plantilla__descripcion {
+  font-size: 0.78rem;
+  color: var(--oms-texto-suave);
+  margin: 0;
+}
+
+/* ==========================================================================
+   11. Portal de documentación técnica
+   ========================================================================== */
+.modal-documentacion .modal-content {
+  background: var(--bs-body-bg);
+}
+
+.encabezado-documentacion {
+  background: linear-gradient(120deg,
+      color-mix(in srgb, var(--bs-primary) 22%, var(--bs-body-bg)),
+      var(--bs-body-bg));
+  border-bottom: 1px solid var(--oms-borde);
+  padding: 1.25rem 1.5rem;
+  align-items: flex-start;
+}
+
+.encabezado-documentacion__texto h4 {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.fila-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.35rem;
+}
+
+.insignia {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+
+.insignia--verde { background: rgba(25, 135, 84, 0.18); color: #2fbf71; border-color: rgba(25, 135, 84, 0.4); }
+.insignia--azul { background: rgba(13, 110, 253, 0.18); color: #4d9bff; border-color: rgba(13, 110, 253, 0.4); }
+.insignia--violeta { background: rgba(111, 66, 193, 0.2); color: #b18cff; border-color: rgba(111, 66, 193, 0.4); }
+.insignia--ambar { background: rgba(255, 193, 7, 0.18); color: #ffca2c; border-color: rgba(255, 193, 7, 0.4); }
+
+.cuerpo-documentacion {
+  padding: 1.5rem;
+  background:
+    radial-gradient(1200px 400px at 100% -10%, color-mix(in srgb, var(--bs-primary) 8%, transparent), transparent);
+}
+
+.seccion-documentacion {
+  max-width: 1100px;
+  margin: 0 auto 2.25rem;
+}
+
+.lead-texto {
+  font-size: 1.02rem;
+  color: var(--bs-body-color);
+  line-height: 1.65;
+}
+
+.titulo-seccion {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--oms-borde);
+  font-weight: 700;
+}
+
+.titulo-seccion .material-symbols-outlined {
+  color: var(--bs-primary);
+}
+
+/* ---- Métricas ---- */
+.rejilla-metricas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 1rem;
+}
+
+.tarjeta-metrica {
+  border: 1px solid var(--oms-borde);
+  border-radius: var(--oms-radio);
+  background: var(--oms-superficie-alt);
+  padding: 1.1rem 1.25rem;
+  box-shadow: var(--oms-sombra-suave);
+}
+
+.tarjeta-metrica__cabecera {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.9rem;
+}
+
+.tarjeta-metrica__cabecera .material-symbols-outlined {
+  color: var(--bs-primary);
+}
+
+.tarjeta-metrica__cabecera h6 {
+  margin: 0;
+  font-weight: 700;
+}
+
+.medidor-almacenamiento__pista {
+  height: 0.7rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bs-body-color) 12%, transparent);
+  overflow: hidden;
+}
+
+.medidor-almacenamiento__relleno {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--bs-success), var(--bs-primary));
+  transition: width 0.4s ease;
+}
+
+.medidor-almacenamiento__relleno.nivel-alto {
+  background: linear-gradient(90deg, var(--bs-warning), var(--bs-danger));
+}
+
+.medidor-almacenamiento__cifras {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  margin-top: 0.45rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.lista-metricas {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+}
+
+.lista-metricas--suelta {
+  margin-top: 0;
+}
+
+.lista-metricas li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px dashed var(--oms-borde);
+  font-size: 0.85rem;
+}
+
+.lista-metricas li:last-child {
+  border-bottom: 0;
+}
+
+.lista-metricas span {
+  color: var(--oms-texto-suave);
+}
+
+/* ---- Pipeline ---- */
+.pipeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0;
+}
+
+.pipeline__paso {
+  display: flex;
+  gap: 1rem;
+  position: relative;
+  padding-bottom: 1.25rem;
+}
+
+.pipeline__paso:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 1.05rem;
+  top: 2.3rem;
+  bottom: 0;
+  width: 2px;
+  background: color-mix(in srgb, var(--bs-primary) 35%, transparent);
+}
+
+.pipeline__indice {
+  flex: 0 0 auto;
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, var(--bs-primary), color-mix(in srgb, var(--bs-primary) 55%, #7b3fe4));
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--bs-primary) 15%, transparent);
+}
+
+.pipeline__contenido h6 {
+  margin: 0.15rem 0 0.2rem;
+  font-weight: 700;
+}
+
+.pipeline__contenido p {
+  margin: 0;
+  color: var(--oms-texto-suave);
+  font-size: 0.88rem;
+}
+
+/* ---- Tarjetas de operación (estilo API) ---- */
+.rejilla-operaciones {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr));
+  gap: 1rem;
+}
+
+.tarjeta-operacion {
+  border: 1px solid var(--oms-borde);
+  border-radius: var(--oms-radio);
+  background: var(--oms-superficie-alt);
+  overflow: hidden;
+  box-shadow: var(--oms-sombra-suave);
+}
+
+.tarjeta-operacion__encabezado {
+  padding: 1rem 1.1rem 0.75rem;
+}
+
+.tarjeta-operacion__ruta {
+  display: block;
+  margin: 0.5rem 0 0.4rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--bs-body-color);
+}
+
+.tarjeta-operacion__descripcion {
+  font-size: 0.84rem;
+  color: var(--oms-texto-suave);
+  margin: 0 0 0.4rem;
+}
+
+.tarjeta-operacion__parametros {
+  font-size: 0.76rem;
+  color: var(--oms-texto-suave);
+  margin: 0;
+}
+
+.insignia-metodo {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 0.3rem;
+}
+
+.insignia-metodo--local { background: rgba(13, 110, 253, 0.2); color: #4d9bff; }
+.insignia-metodo--style { background: rgba(111, 66, 193, 0.22); color: #b18cff; }
+.insignia-metodo--export { background: rgba(25, 135, 84, 0.22); color: #2fbf71; }
+
+.nav-tabs-tecnicas {
+  padding: 0 1.1rem;
+  border-bottom: 1px solid var(--oms-borde);
+  gap: 0.25rem;
+}
+
+.nav-tabs-tecnicas .nav-link {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--oms-texto-suave);
+  font-size: 0.8rem;
+  padding: 0.45rem 0.6rem;
+  background: transparent;
+}
+
+.nav-tabs-tecnicas .nav-link.active {
+  color: var(--bs-primary);
+  border-bottom-color: var(--bs-primary);
+  background: transparent;
+}
+
+.contenido-pestanas {
+  padding: 0.9rem 1.1rem 1.1rem;
+  font-size: 0.85rem;
+  color: var(--oms-texto-suave);
+}
+
+.bloque-codigo {
+  margin: 0;
+  padding: 0.8rem 0.9rem;
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--bs-body-color) 8%, var(--bs-body-bg));
+  border: 1px solid var(--oms-borde);
+  overflow-x: auto;
+}
+
+.bloque-codigo code {
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 0.78rem;
+  color: var(--bs-body-color);
+  white-space: pre;
+}
+
+/* ---- Tabla de sintaxis ---- */
+.contenedor-tabla-documentacion {
+  border: 1px solid var(--oms-borde);
+  border-radius: var(--oms-radio);
+  overflow: hidden;
+  background: var(--oms-superficie-alt);
+}
+
+.tabla-sintaxis {
+  margin: 0;
+}
+
+.tabla-sintaxis thead th {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--oms-texto-suave);
+  border-bottom: 1px solid var(--oms-borde);
+  padding: 0.7rem 1rem;
+}
+
+.tabla-sintaxis tbody td {
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid var(--oms-borde);
+  font-size: 0.85rem;
+  vertical-align: middle;
+  color: var(--bs-body-color);
+}
+
+.tabla-sintaxis tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.tabla-sintaxis tbody tr:hover {
+  background: color-mix(in srgb, var(--bs-primary) 8%, transparent);
+}
+
+.tabla-sintaxis code {
+  background: color-mix(in srgb, var(--bs-body-color) 8%, transparent);
+  padding: 0.12rem 0.4rem;
+  border-radius: 0.3rem;
+  font-size: 0.8rem;
+}
+
+/* ==========================================================================
+   11b. Barra de búsqueda y reemplazo
+   ========================================================================== */
+.barra-busqueda {
+  z-index: 1050;
+  position: absolute;
+  top: 0.6rem;
+  right: 0.75rem;
+
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.45rem;
+  border-radius: var(--oms-radio);
+  background: var(--bs-body-bg);
+  border: 1px solid var(--oms-borde);
+  box-shadow: var(--oms-sombra-media);
+}
+
+.barra-busqueda[hidden] {
+  display: none;
+}
+
+.barra-busqueda__fila {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.barra-busqueda__fila[hidden] {
+  display: none;
+}
+
+.barra-busqueda__icono {
+  color: var(--oms-texto-suave);
+  font-size: 1.1rem;
+}
+
+.barra-busqueda__campo {
+  flex: 1 1 12rem;
+  min-width: 12rem;
+  border: 1px solid var(--oms-borde);
+  background: var(--oms-superficie-alt);
+  color: var(--bs-body-color);
+  border-radius: 0.4rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8rem;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+.barra-busqueda__campo:focus {
+  outline: none;
+  border-color: var(--bs-primary);
+}
+
+.barra-busqueda__contador {
+  min-width: 4.2rem;
+  text-align: center;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--oms-texto-suave);
+}
+
+.barra-busqueda__contador.sin-resultados {
+  color: var(--bs-danger);
+}
+
+.boton-busqueda {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.8rem;
+  height: 1.8rem;
+  border: 1px solid transparent;
+  border-radius: 0.4rem;
+  background: transparent;
+  color: var(--bs-body-color);
+  transition: background 0.15s ease;
+}
+
+.boton-busqueda:hover {
+  background: color-mix(in srgb, var(--bs-primary) 16%, transparent);
+  color: var(--bs-primary);
+}
+
+.boton-busqueda .material-symbols-outlined {
+  font-size: 1.1rem;
+}
+
+.boton-busqueda--texto {
+  width: auto;
+  padding: 0 0.5rem;
+}
+
+/* ==========================================================================
+   11c. Minimapa de navegación
+   ========================================================================== */
+.minimapa {
+  position: absolute;
+  right: 1rem;
+  top: 1rem;
+  width: 13rem;
+  height: 9rem;
+  padding: 0.3rem;
+  border-radius: 0.65rem;
+  background: color-mix(in srgb, var(--bs-body-bg) 92%, transparent);
+  border: 1px solid var(--oms-borde);
+  box-shadow: var(--oms-sombra-media);
+  backdrop-filter: blur(6px);
+  z-index: 7;
+}
+
+.minimapa[hidden] {
+  display: none;
+}
+
+.minimapa__contenido {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 0.45rem;
+  background: var(--oms-superficie-alt);
+  background-image:
+    linear-gradient(var(--oms-lienzo-cuadricula) 1px, transparent 1px),
+    linear-gradient(90deg, var(--oms-lienzo-cuadricula) 1px, transparent 1px);
+  background-size: 12px 12px;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.minimapa__svg {
+  position: absolute;
+  max-width: none;
+}
+
+.minimapa__viewport {
+  position: absolute;
+  border: 1px solid var(--bs-primary);
+  background: color-mix(in srgb, var(--bs-primary) 16%, transparent);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+.minimapa__cerrar {
+  position: absolute;
+  top: -0.55rem;
+  right: -0.55rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 50%;
+  border: 1px solid var(--oms-borde);
+  background: var(--bs-body-bg);
+  color: var(--bs-body-color);
+}
+
+.minimapa__cerrar .material-symbols-outlined {
+  font-size: 0.95rem;
+}
+
+/* ==========================================================================
+   11d. Modo presentación
+   ========================================================================== */
+.barra-presentacion {
+  position: absolute;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.4rem 0.5rem 0.4rem 0.85rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bs-body-bg) 92%, transparent);
+  border: 1px solid var(--oms-borde);
+  box-shadow: var(--oms-sombra-media);
+  backdrop-filter: blur(6px);
+  z-index: 9;
+}
+
+.barra-presentacion[hidden] {
+  display: none;
+}
+
+.barra-presentacion__pista {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--oms-texto-suave);
+}
+
+.modo-presentacion .oms-navbar,
+.modo-presentacion .sidebar,
+.modo-presentacion .panel-editor,
+.modo-presentacion .separador-paneles,
+.modo-presentacion .barra-estado {
+  display: none !important;
+}
+
+.modo-presentacion .lienzo {
+  cursor: default;
+}
+
+/* ==========================================================================
+   11e. Historial de versiones
+   ========================================================================== */
+.lista-historial {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.elemento-historial {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--oms-borde);
+  border-radius: var(--oms-radio);
+  background: var(--oms-superficie-alt);
+}
+
+.elemento-historial__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.elemento-historial__fecha {
+  font-size: 0.75rem;
+  color: var(--oms-texto-suave);
+}
+
+.elemento-historial__resumen {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.78rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: color-mix(in srgb, var(--bs-body-color) 8%, transparent);
+  padding: 0.1rem 0.35rem;
+  border-radius: 0.3rem;
+}
+
+.elemento-historial__acciones {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.insignia-historial {
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--bs-primary);
+  border: 1px solid var(--bs-primary);
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+}
+
+/* ==========================================================================
+   11f. Referencia de atajos
+   ========================================================================== */
+.rejilla-atajos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: 1rem;
+}
+
+.grupo-atajos__titulo {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--oms-texto-suave);
+  margin-bottom: 0.5rem;
+}
+
+.grupo-atajos__lista {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  gap: 0.4rem 0.75rem;
+  margin: 0;
+}
+
+.grupo-atajos__lista dt {
+  font-weight: 400;
+  text-align: right;
+}
+
+.grupo-atajos__lista dd {
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+.grupo-atajos__lista kbd {
+  display: inline-block;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.72rem;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  color: var(--bs-body-color);
+  background: var(--oms-superficie-alt);
+  border: 1px solid var(--oms-borde);
+  border-bottom-width: 2px;
+  border-radius: 0.3rem;
+}
+
+/* ==========================================================================
+   12. Scrollbars finos
+   ========================================================================== */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--oms-borde);
+  border-radius: 6px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--oms-texto-suave);
+  background-clip: padding-box;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--oms-borde) transparent;
+}
+
+/* ==========================================================================
+   13. Responsive
+   --------------------------------------------------------------------------
+   Convención de puntos de quiebre del proyecto (max-width):
+     1200px · portátiles pequeños y tabletas en horizontal
+     1024px · conmutación icono / texto de la barra superior
+      991px · tabletas en vertical
+      768px · punto de quiebre principal (móvil y tableta)
+      576px · teléfonos inteligentes estándar
+      400px · teléfonos ultra pequeños
+   ========================================================================== */
+
+/* ---- 1200px · portátiles pequeños y tabletas en horizontal ---- */
+@media (max-width: 1200px) {
+  :root {
+    --oms-ancho-sidebar: 14rem;
+    --oms-ancho-panel-editor: 44%;
+  }
+
+  .cuerpo-documentacion {
+    padding: 1.25rem;
+  }
+
+  .seccion-documentacion {
+    margin-bottom: 1.75rem;
+  }
+}
+
+/* ---- 1024px · conmutación icono / texto ---- */
+@media (max-width: 1024px) {
+  /* Los botones de la barra pasan a mostrar solo su icono. */
+  .oms-navbar .d-lg-inline {
+    display: none !important;
+  }
+
+  .oms-navbar {
+    padding-right: 0.5rem;
+    padding-left: 0.5rem;
+  }
+
+  .oms-navbar .navbar-brand {
+    font-size: 1.05rem;
+  }
+
+  .oms-boton-barra {
+    padding: 0.4rem 0.5rem;
+  }
+}
+
+/* ---- 991px · tabletas en vertical ---- */
+@media (max-width: 991px) {
+  .workspace {
+    position: relative;
+  }
+
+  .sidebar {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 40;
+    width: var(--oms-ancho-sidebar);
+    max-width: 85vw;
+    height: 100%;
+    box-shadow: var(--oms-sombra-media);
+  }
+
+  .sidebar.colapsado {
+    width: 0;
+  }
+
+  .panel-editor {
+    min-width: 220px;
+    max-width: 70%;
+  }
+
+  .encabezado-panel {
+    flex-wrap: wrap;
+    row-gap: 0.25rem;
+  }
+}
+
+/* ---- 768px · punto de quiebre principal ---- */
+@media (max-width: 768px) {
+  .oms-navbar {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+
+  .oms-navbar .navbar-brand {
+    font-size: 1rem;
+  }
+
+  .workspace {
+    flex-direction: column;
+  }
+
+  .panel-editor {
+    width: 100% !important;
+    min-width: 0;
+    max-width: 100%;
+    height: 45%;
+  }
+
+  .separador-paneles {
+    flex-basis: 6px;
+    cursor: row-resize;
+  }
+
+  .separador-paneles::after {
+    inset: 2px 40%;
+  }
+
+  .estadistica--opcional {
+    display: none;
+  }
+
+  /* Controles del lienzo y minimapa más compactos. */
+  .controles-flotantes-lienzo {
+    right: 0.6rem;
+    bottom: 0.6rem;
+    gap: 0.3rem;
+    padding: 0.3rem;
+  }
+
+  .minimapa {
+    top: 0.6rem;
+    right: 0.6rem;
+    width: 9.5rem;
+    height: 6.5rem;
+  }
+
+  .barra-presentacion {
+    left: 0.5rem;
+    right: 0.5rem;
+    transform: none;
+    gap: 0.5rem;
+    border-radius: 0.75rem;
+  }
+
+  .barra-presentacion__pista {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .barra-estado {
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    padding: 0.35rem 0.6rem;
+  }
+
+  /* Menús desplegables dentro del ancho del viewport. */
+  .oms-menu {
+    min-width: 0;
+    width: min(20rem, calc(100vw - 1rem));
+    max-width: calc(100vw - 1rem);
+  }
+
+  .modal .modal-body {
+    padding: 1rem;
+  }
+
+  .cuerpo-documentacion {
+    padding: 1rem;
+  }
+}
+
+/* ---- 576px · teléfonos inteligentes estándar ---- */
+@media (max-width: 576px) {
+  .panel-editor {
+    height: 42%;
+  }
+
+  .encabezado-panel__titulo {
+    max-width: 60%;
+    font-size: 0.9rem;
+  }
+
+  .grupo-estadisticas {
+    font-size: 0.72rem;
+    gap: 0.5rem;
+  }
+
+  .barra-busqueda {
+    left: 0.5rem;
+    right: 0.5rem;
+    top: 0.5rem;
+  }
+
+  .barra-busqueda__campo {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .barra-estado__elemento.ms-auto {
+    display: none;
+  }
+
+  .boton-flotante {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .encabezado-documentacion {
+    padding: 1rem;
+  }
+
+  .cuerpo-documentacion {
+    padding: 1rem 0.85rem;
+  }
+
+  .titulo-seccion {
+    font-size: 1.05rem;
+  }
+
+  .pipeline__paso {
+    gap: 0.75rem;
+  }
+}
+
+/* ---- 400px · teléfonos ultra pequeños ---- */
+@media (max-width: 400px) {
+  .oms-navbar .navbar-brand span:not(.material-symbols-outlined) {
+    display: none;
+  }
+
+  .oms-boton-barra {
+    padding: 0.35rem;
+  }
+
+  .panel-editor {
+    height: 42%;
+  }
+
+  .boton-flotante {
+    width: 1.95rem;
+    height: 1.95rem;
+  }
+
+  .indicador-zoom {
+    font-size: 0.66rem;
+  }
+
+  .barra-presentacion__pista {
+    display: none;
+  }
+
+  .grupo-estadisticas .estadistica:not(:nth-child(2)) {
+    display: none;
+  }
+
+  .cuerpo-documentacion {
+    padding: 0.85rem 0.7rem;
+  }
+}
+
+/* Estilos para el diálogo de exportación avanzada y SweetAlert2 */
+.oms-export-resumen {
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--oms-radius-md);
+  background: var(--oms-color-superficie-sub);
+  border: 1px solid var(--oms-color-borde);
+  color: var(--oms-color-texto-secundario);
+}
+
+.swal2-container .swal2-popup {
+  border-radius: var(--oms-radius-xl);
+  box-shadow: 0 40px 90px -70px rgba(15, 23, 42, 0.95);
+}
+
+[data-bs-theme="light"] .swal2-container .swal2-popup {
+  box-shadow: 0 40px 90px -70px rgba(15, 23, 42, 0.25);
+}
+
+.swal2-container .swal2-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.swal2-container .swal2-text {
+  font-size: 0.95rem;
+  line-height: 1.6;
+}

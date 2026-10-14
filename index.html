@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="es" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="OpenMermaid Studio: editor de diagramas Mermaid 100% client-side con sistema de archivos local, estilizado cromático algorítmico, exportación múltiple y documentación técnica integrada. Sin IA, sin backend." />
+  <meta name="theme-color" content="#0b0e14" />
+  <title>OpenMermaid Studio</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet" />
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet" />
+  <link href="css/styles.css" rel="stylesheet" />
+  <!--ico-->
+  <link rel="icon" type="image/x-icon" href="img/favicon.ico" />
+</head>
+<body>
+
+  <div class="app-shell">
+
+    <!-- ============================== Barra superior ============================== -->
+    <nav class="navbar navbar-expand oms-navbar px-2 py-1">
+      <button type="button" class="oms-boton-barra" id="botonToggleSidebar" title="Mostrar / ocultar explorador (Ctrl+B)">
+        <span class="material-symbols-outlined">menu</span>
+      </button>
+
+      <a class="navbar-brand d-flex align-items-center gap-2 mb-0" href="#">
+        <span class="material-symbols-outlined" style="font-size: 1.6rem;">hub</span>
+        <span>OpenMermaid Studio</span>
+      </a>
+
+      <div class="d-flex align-items-center gap-1 ms-auto flex-wrap">
+        <button type="button" class="oms-boton-barra" id="botonGuardar" title="Guardar (Ctrl+S)">
+          <span class="material-symbols-outlined">save</span>
+          <span class="d-none d-lg-inline">Guardar</span>
+        </button>
+
+        <button type="button" class="oms-boton-barra" id="botonGuardarComo" title="Guardar como… (Ctrl+Shift+S)">
+          <span class="material-symbols-outlined">save_as</span>
+          <span class="d-none d-xl-inline">Guardar como</span>
+        </button>
+
+        <button type="button" class="oms-boton-barra" id="botonAbrirRespaldo" title="Respaldo y restauración JSON">
+          <span class="material-symbols-outlined">cloud_sync</span>
+          <span class="d-none d-xl-inline">Respaldo</span>
+        </button>
+
+        <button type="button" class="oms-boton-barra" id="botonAbrirGaleriaPlantillas" title="Catálogo de plantillas">
+          <span class="material-symbols-outlined">grid_view</span>
+          <span class="d-none d-lg-inline">Plantillas</span>
+        </button>
+
+        <button type="button" class="oms-boton-barra" id="botonAlternarOrientacion" title="Alternar orientación del flujo (TD ↔ LR)">
+          <span class="material-symbols-outlined">screen_rotation</span>
+        </button>
+
+        <button type="button" class="oms-boton-barra" id="botonBuscar" title="Buscar y reemplazar (Ctrl+F)">
+          <span class="material-symbols-outlined">search</span>
+        </button>
+
+        <button type="button" class="oms-boton-barra" id="botonHistorial" title="Historial de versiones (Ctrl+H)">
+          <span class="material-symbols-outlined">history</span>
+          <span class="d-none d-xl-inline">Historial</span>
+        </button>
+
+        <button type="button" class="oms-boton-barra" id="botonMinimapa" title="Mostrar / ocultar minimapa (Ctrl+M)">
+          <span class="material-symbols-outlined">map</span>
+        </button>
+
+        <button type="button" class="oms-boton-barra" id="botonPresentacion" title="Modo presentación (F10)">
+          <span class="material-symbols-outlined">slideshow</span>
+        </button>
+
+        <button type="button" class="oms-boton-barra" id="botonAtajos" title="Referencia de atajos de teclado (?)">
+          <span class="material-symbols-outlined">keyboard</span>
+        </button>
+
+        <!-- Menú de diseño procedural -->
+        <div class="dropdown">
+          <button type="button" class="oms-boton-barra dropdown-toggle" id="botonMenuDiseno" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+            <span class="material-symbols-outlined">palette</span>
+            <span class="d-none d-lg-inline">Diseño</span>
+          </button>
+          <div class="dropdown-menu oms-menu dropdown-menu-end p-3" aria-labelledby="botonMenuDiseno">
+            <h6 class="dropdown-header px-0 pt-0">Motor cromático algorítmico</h6>
+            <label class="oms-etiqueta-control" for="selectorArmonia">Armonía</label>
+            <select class="form-select form-select-sm mb-2" id="selectorArmonia"></select>
+
+            <label class="oms-etiqueta-control" for="entradaColorBase">Matiz base</label>
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <input type="color" class="form-control form-control-color entrada-color" id="entradaColorBase" value="#2f6fed" />
+              <button type="button" class="oms-boton-barra flex-grow-1 justify-content-center" id="botonPaletaAleatoria">
+                <span class="material-symbols-outlined">casino</span>
+                <span>Generar paleta algorítmica</span>
+              </button>
+            </div>
+
+            <label class="oms-etiqueta-control" for="rangoSaturacion">Saturación base: <span id="valorSaturacion">68</span>%</label>
+            <input type="range" class="form-range mb-3" id="rangoSaturacion" min="0" max="100" step="1" value="68" />
+
+            <div class="muestra-paleta mb-3" id="muestraPaleta" title="Paleta generada"></div>
+
+            <div class="form-check form-switch mb-3">
+              <input class="form-check-input" type="checkbox" role="switch" id="interruptorClasesEstilo" />
+              <label class="form-check-label small" for="interruptorClasesEstilo">Añadir clases de estilo al flujo</label>
+            </div>
+
+            <button type="button" class="btn btn-sm btn-primary w-100" id="botonAplicarDiseno">
+              <span class="material-symbols-outlined align-middle" style="font-size: 1rem;">auto_fix_high</span>
+              Aplicar al código
+            </button>
+          </div>
+        </div>
+
+        <!-- Menú de exportación -->
+        <div class="dropdown">
+          <button type="button" class="oms-boton-barra dropdown-toggle" id="botonMenuExportar" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+            <span class="material-symbols-outlined">download</span>
+            <span class="d-none d-lg-inline">Exportar</span>
+          </button>
+          <div class="dropdown-menu oms-menu dropdown-menu-end" aria-labelledby="botonMenuExportar">
+            <button type="button" class="dropdown-item" id="abrirModalExportacion"><span class="material-symbols-outlined">tune</span> Exportación avanzada…</button>
+            <div class="dropdown-divider"></div>
+            <h6 class="dropdown-header">Vectorial y documentos</h6>
+            <button type="button" class="dropdown-item" id="exportarSvg"><span class="material-symbols-outlined">image</span> SVG vectorial</button>
+            <button type="button" class="dropdown-item" id="exportarPdf"><span class="material-symbols-outlined">picture_as_pdf</span> PDF (A4)</button>
+            <h6 class="dropdown-header">PNG rasterizado</h6>
+            <button type="button" class="dropdown-item" id="exportarPng1x"><span class="material-symbols-outlined">photo_size_select_actual</span> PNG · 1x</button>
+            <button type="button" class="dropdown-item" id="exportarPng2x"><span class="material-symbols-outlined">photo_size_select_large</span> PNG · 2x</button>
+            <button type="button" class="dropdown-item" id="exportarPng4x"><span class="material-symbols-outlined">high_quality</span> PNG · 4x</button>
+            <h6 class="dropdown-header">Código fuente y portapapeles</h6>
+            <button type="button" class="dropdown-item" id="exportarCodigoMmd"><span class="material-symbols-outlined">description</span> Código fuente (.mmd)</button>
+            <button type="button" class="dropdown-item" id="copiarCodigo"><span class="material-symbols-outlined">content_copy</span> Copiar código</button>
+            <button type="button" class="dropdown-item" id="copiarSvg"><span class="material-symbols-outlined">data_object</span> Copiar SVG</button>
+            <button type="button" class="dropdown-item" id="copiarPng"><span class="material-symbols-outlined">image</span> Copiar PNG</button>
+            <div class="dropdown-divider"></div>
+            <div class="px-4">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" role="switch" id="interruptorMarcaDeAgua" />
+                <label class="form-check-label small" for="interruptorMarcaDeAgua">Marca de agua en la exportación</label>
+              </div>
+            </div>
+            <div class="px-4 pb-2">
+              <input type="text" class="form-control form-control-sm" id="autorMarcaDeAgua" placeholder="Autor (opcional)" />
+            </div>
+          </div>
+        </div>
+
+        <button type="button" class="oms-boton-barra" id="botonModoOscuro" title="Cambiar tema claro / oscuro">
+          <span class="material-symbols-outlined" id="iconoModoOscuro">light_mode</span>
+        </button>
+
+        <button type="button" class="oms-boton-barra boton-documentacion" id="botonAbrirDocumentacion" title="Documentación técnica">
+          <span class="material-symbols-outlined">menu_book</span>
+          <span class="d-none d-lg-inline">Documentación</span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- ============================== Área de trabajo ============================== -->
+    <main class="workspace">
+
+      <!-- Explorador de archivos -->
+      <aside class="sidebar" id="sidebar" aria-label="Explorador de diagramas">
+        <div class="sidebar__cabecera">
+          <h2 class="sidebar__titulo">
+            <span class="material-symbols-outlined">folder</span>
+            Explorador
+          </h2>
+          <div class="sidebar__acciones">
+            <button type="button" class="boton-herramienta" id="botonNuevaCarpeta" title="Nueva carpeta">
+              <span class="material-symbols-outlined">create_new_folder</span>
+            </button>
+            <button type="button" class="boton-herramienta" id="botonNuevoDiagrama" title="Nuevo diagrama">
+              <span class="material-symbols-outlined">note_add</span>
+            </button>
+          </div>
+        </div>
+        <nav class="arbol" id="arbolArchivos" aria-label="Árbol de carpetas y diagramas"></nav>
+      </aside>
+
+      <!-- Panel del editor -->
+      <section class="panel-editor" id="panelEditor" aria-label="Editor de código Mermaid">
+        <header class="encabezado-panel">
+          <h1 class="encabezado-panel__titulo">
+            <span class="material-symbols-outlined">code</span>
+            <span id="nombreArchivoActivo">Diagrama</span>
+          </h1>
+          <div class="grupo-estadisticas">
+            <span class="estadistica estadistica--opcional" title="Posición del cursor">
+              <span class="material-symbols-outlined">my_location</span>
+              <span id="estadisticaPosicion">Ln 1, Col 1</span>
+            </span>
+            <span class="estadistica" title="Número de líneas">
+              <span class="material-symbols-outlined">format_list_numbered</span>
+              <span id="estadisticaLineas">0 líneas</span>
+            </span>
+            <span class="estadistica estadistica--opcional" title="Número de caracteres">
+              <span class="material-symbols-outlined">text_fields</span>
+              <span id="estadisticaCaracteres">0</span>
+            </span>
+            <span class="estadistica" title="Tamaño del documento">
+              <span class="material-symbols-outlined">data_usage</span>
+              <span id="estadisticaTamano">0 B</span>
+            </span>
+          </div>
+        </header>
+
+        <div class="contenedor-editor">
+          <pre class="numeros-linea" id="numerosLinea" aria-hidden="true">1</pre>
+          <textarea
+            class="editor-codigo"
+            id="editorCodigo"
+            spellcheck="false"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="off"
+            wrap="off"
+            aria-label="Código Mermaid"
+            placeholder="Escribe aquí tu diagrama Mermaid..."
+          ></textarea>
+        </div>
+
+        <!-- Barra flotante de búsqueda y reemplazo -->
+        <div class="barra-busqueda" id="barraBusqueda" role="search" aria-label="Buscar y reemplazar" hidden>
+          <div class="barra-busqueda__fila">
+            <span class="material-symbols-outlined barra-busqueda__icono">search</span>
+            <input type="text" class="barra-busqueda__campo" id="entradaBuscar" placeholder="Buscar…" />
+            <span class="barra-busqueda__contador" id="contadorCoincidencias">0 de 0</span>
+            <button type="button" class="boton-busqueda" id="botonBuscarAnterior" title="Anterior (Shift+Enter)">
+              <span class="material-symbols-outlined">keyboard_arrow_up</span>
+            </button>
+            <button type="button" class="boton-busqueda" id="botonBuscarSiguiente" title="Siguiente (Enter)">
+              <span class="material-symbols-outlined">keyboard_arrow_down</span>
+            </button>
+            <button type="button" class="boton-busqueda" id="botonCerrarBusqueda" title="Cerrar (Esc)">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+          <div class="barra-busqueda__fila" id="filaReemplazo" hidden>
+            <span class="material-symbols-outlined barra-busqueda__icono">find_replace</span>
+            <input type="text" class="barra-busqueda__campo" id="entradaReemplazar" placeholder="Reemplazar por…" />
+            <button type="button" class="boton-busqueda boton-busqueda--texto" id="botonReemplazar" title="Reemplazar">
+              <span class="material-symbols-outlined">swap_horiz</span>
+            </button>
+            <button type="button" class="boton-busqueda boton-busqueda--texto" id="botonReemplazarTodo" title="Reemplazar todo">
+              <span class="material-symbols-outlined">done_all</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Divisor redimensionable -->
+      <div class="separador-paneles" id="separadorPaneles" role="separator" aria-orientation="vertical" tabindex="0" aria-label="Redimensionar paneles"></div>
+
+      <!-- Panel del lienzo -->
+      <section class="panel-lienzo" aria-label="Lienzo del diagrama">
+        <div class="lienzo" id="lienzo">
+          <div class="contenido-lienzo" id="contenidoLienzo"></div>
+
+          <!-- Minimapa de navegación -->
+          <div class="minimapa" id="minimapa" hidden aria-hidden="true">
+            <div class="minimapa__contenido" id="minimapaContenido">
+              <div class="minimapa__viewport" id="minimapaViewport"></div>
+            </div>
+            <button type="button" class="minimapa__cerrar" id="botonCerrarMinimapa" title="Ocultar minimapa">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          <div class="superposicion-lienzo estado-vacio" id="superposicionVacia" hidden>
+            <span class="material-symbols-outlined">gesture</span>
+            <p class="mb-0">El lienzo está vacío. Escribe o carga una plantilla para empezar.</p>
+          </div>
+
+          <div class="superposicion-lienzo estado-error" id="superposicionError" hidden>
+            <div class="tarjeta-error">
+              <div class="tarjeta-error__titulo">
+                <span class="material-symbols-outlined">error</span>
+                No se pudo renderizar el diagrama
+              </div>
+              <pre class="tarjeta-error__detalle" id="detalleError"></pre>
+            </div>
+          </div>
+
+          <!-- Controles flotantes del lienzo -->
+          <div class="controles-flotantes-lienzo">
+            <button type="button" class="boton-flotante" id="btn-zoom-in" title="Acercar (+)">
+              <span class="material-symbols-outlined">add</span>
+            </button>
+            <button type="button" class="boton-flotante" id="btn-zoom-out" title="Alejar (-)">
+              <span class="material-symbols-outlined">remove</span>
+            </button>
+            <span class="indicador-zoom indicador-zoom--flotante" id="zoom-level-text" title="Restablecer zoom">100%</span>
+            <button type="button" class="boton-flotante" id="btn-zoom-reset" title="Restablecer al 100%">
+              <span class="material-symbols-outlined">restart_alt</span>
+            </button>
+            <button type="button" class="boton-flotante" id="btn-fit-screen" title="Ajustar a la pantalla">
+              <span class="material-symbols-outlined">zoom_out_map</span>
+            </button>
+            <button type="button" class="boton-flotante" id="btn-fullscreen" title="Pantalla completa / Presentación">
+              <span class="material-symbols-outlined">crop_free</span>
+            </button>
+          </div>
+
+          <!-- Barra minimalista del modo presentación -->
+          <div class="barra-presentacion" id="barraPresentacion" hidden>
+            <span class="barra-presentacion__pista">
+              <span class="material-symbols-outlined">slideshow</span>
+              Modo presentación · pulsa F10 o Esc para salir
+            </span>
+            <button type="button" class="btn btn-sm btn-light" id="botonSalirPresentacion">
+              <span class="material-symbols-outlined align-middle" style="font-size: 1rem;">close</span>
+              Salir
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- ============================== Barra de estado ============================== -->
+    <footer class="barra-estado">
+      <span class="barra-estado__elemento">
+        <span class="punto-estado" id="puntoEstado"></span>
+        <span id="estadoRenderizado">Listo</span>
+      </span>
+      <span class="barra-estado__elemento">
+        <span class="material-symbols-outlined" style="font-size: 0.9rem;">rule</span>
+        <span id="estadoSintaxis">Sintaxis: pendiente</span>
+      </span>
+      <span class="barra-estado__elemento">
+        <span class="material-symbols-outlined" style="font-size: 0.9rem;">info</span>
+        Mermaid <span id="estadoVersionMermaid">—</span>
+      </span>
+      <span class="barra-estado__elemento">
+        <span class="material-symbols-outlined" style="font-size: 0.9rem;">database</span>
+        <span id="estadoAlmacenamiento">0 B</span>
+      </span>
+      <span class="barra-estado__elemento ms-auto">Software libre · MIT · Sin IA · Sin backend</span>
+    </footer>
+  </div>
+
+  <!-- ============================== Modal: plantillas ============================== -->
+  <div class="modal fade" id="modalPlantillas" tabindex="-1" aria-labelledby="tituloModalPlantillas" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title d-flex align-items-center gap-2" id="tituloModalPlantillas">
+            <span class="material-symbols-outlined">grid_view</span>
+            Catálogo de plantillas
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          <div class="galeria-plantillas" id="galeriaPlantillas"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================== Modal: Guardar como… ============================== -->
+  <div class="modal fade" id="modalGuardarComo" tabindex="-1" aria-labelledby="tituloModalGuardarComo" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <form class="modal-content" id="formularioGuardarComo">
+        <div class="modal-header">
+          <h5 class="modal-title d-flex align-items-center gap-2" id="tituloModalGuardarComo">
+            <span class="material-symbols-outlined">save_as</span>
+            Guardar como…
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          <label class="form-label" for="campoNombreArchivo">Nombre del diagrama</label>
+          <input type="text" class="form-control mb-3" id="campoNombreArchivo" placeholder="Mi nuevo diagrama" />
+          <label class="form-label" for="selectorCarpetaDestino">Carpeta destino</label>
+          <select class="form-select" id="selectorCarpetaDestino"></select>
+          <div class="form-text text-danger mt-2" id="errorGuardarComo"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Crear diagrama</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============================== Modal: respaldo JSON ============================== -->
+  <div class="modal fade" id="modalRespaldo" tabindex="-1" aria-labelledby="tituloModalRespaldo" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title d-flex align-items-center gap-2" id="tituloModalRespaldo">
+            <span class="material-symbols-outlined">cloud_sync</span>
+            Gestión de respaldo
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          <p class="small text-secondary">
+            El respaldo serializa <strong>todo</strong> el espacio de trabajo (carpetas y diagramas) en un archivo JSON.
+            Guárdalo donde quieras y restáuralo cuando necesites.
+          </p>
+          <div class="d-grid gap-2 mb-3">
+            <button type="button" class="btn btn-primary" id="botonExportarRespaldo">
+              <span class="material-symbols-outlined align-middle" style="font-size: 1.05rem;">download</span>
+              Exportar respaldo JSON
+            </button>
+            <label class="btn btn-outline-primary mb-0" for="entradaImportarRespaldo">
+              <span class="material-symbols-outlined align-middle" style="font-size: 1.05rem;">upload</span>
+              Importar respaldo JSON
+            </label>
+            <input type="file" id="entradaImportarRespaldo" accept="application/json,.json" class="d-none" />
+          </div>
+          <div class="form-text" id="mensajeRespaldo"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================== Modal: entrada de texto genérica ============================== -->
+  <div class="modal fade" id="modalEntradaTexto" tabindex="-1" aria-labelledby="tituloEntradaTexto" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+      <form class="modal-content" id="formularioEntradaTexto">
+        <div class="modal-header">
+          <h5 class="modal-title" id="tituloEntradaTexto">Nombre</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          <label class="form-label" for="campoEntradaTexto" id="etiquetaEntradaTexto">Nombre</label>
+          <input type="text" class="form-control" id="campoEntradaTexto" />
+          <div class="form-text text-danger mt-2" id="errorEntradaTexto"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Confirmar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============================== Modal: documentación técnica ============================== -->
+  <div class="modal fade modal-documentacion" id="modalDocumentacion" tabindex="-1" aria-labelledby="tituloDocumentacion" aria-hidden="true">
+    <div class="modal-dialog modal-fullscreen">
+      <div class="modal-content">
+        <div class="modal-header encabezado-documentacion">
+          <div class="encabezado-documentacion__texto">
+            <h4 class="mb-1" id="tituloDocumentacion">OpenMermaid Studio — Especificación y Documentación Técnica</h4>
+            <div class="fila-badges">
+              <span class="insignia insignia--verde">Production Ready</span>
+              <span class="insignia insignia--azul">Zero Backend / Client-Side</span>
+              <span class="insignia insignia--violeta">LocalStorage Engine v1.0</span>
+              <span class="insignia insignia--ambar">MIT License</span>
+            </div>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+
+        <div class="modal-body cuerpo-documentacion">
+          <section class="seccion-documentacion">
+            <p class="lead-texto">
+              Aplicación de diagramación que funciona íntegramente en el navegador. Sin backend, sin telemetría,
+              sin inteligencia artificial: el estilizado, la selección cromática y la diagramación se resuelven con
+              algoritmos deterministas (teoría del color en HSL, contraste WCAG y manipulación de directivas Mermaid).
+            </p>
+          </section>
+
+          <!-- Métricas en tiempo real -->
+          <section class="seccion-documentacion">
+            <h5 class="titulo-seccion"><span class="material-symbols-outlined">monitoring</span> Panel de métricas en tiempo real</h5>
+            <div class="rejilla-metricas">
+              <article class="tarjeta-metrica">
+                <header class="tarjeta-metrica__cabecera">
+                  <span class="material-symbols-outlined">database</span>
+                  <h6>Almacenamiento local (LocalStorage)</h6>
+                </header>
+                <div class="medidor-almacenamiento">
+                  <div class="medidor-almacenamiento__pista">
+                    <div class="medidor-almacenamiento__relleno" id="docsBarraUso" style="width: 2%"></div>
+                  </div>
+                  <div class="medidor-almacenamiento__cifras">
+                    <span id="docsTamanoUsado">0 B</span>
+                    <span id="docsPorcentajeUso">0%</span>
+                  </div>
+                  <div class="form-text" id="docsTamanoDisponible">libres 0 B de 5.00 MB</div>
+                </div>
+                <ul class="lista-metricas">
+                  <li><span>Diagramas almacenados</span><strong id="docsTotalDiagramas">0</strong></li>
+                  <li><span>Carpetas</span><strong id="docsTotalCarpetas">0</strong></li>
+                  <li><span>Telemetría</span><strong>Cero</strong></li>
+                  <li><span>Aislamiento</span><strong>Navegador del cliente</strong></li>
+                </ul>
+              </article>
+
+              <article class="tarjeta-metrica">
+                <header class="tarjeta-metrica__cabecera">
+                  <span class="material-symbols-outlined">memory</span>
+                  <h6>Motor de render y exportación</h6>
+                </header>
+                <ul class="lista-metricas lista-metricas--suelta">
+                  <li><span>Procesamiento</span><strong>CPU/GPU local</strong></li>
+                  <li><span>Rate limits</span><strong>Ninguno</strong></li>
+                  <li><span>Cuotas diarias</span><strong>Ilimitadas</strong></li>
+                  <li><span>Latencia de red</span><strong>0 ms</strong></li>
+                  <li><span>Formato de salida</span><strong>SVG · PNG · PDF · MMD</strong></li>
+                </ul>
+              </article>
+            </div>
+          </section>
+
+          <!-- Pipeline arquitectónico -->
+          <section class="seccion-documentacion">
+            <h5 class="titulo-seccion"><span class="material-symbols-outlined">account_tree</span> Pipeline arquitectónico</h5>
+            <ol class="pipeline">
+              <li class="pipeline__paso">
+                <span class="pipeline__indice">1</span>
+                <div class="pipeline__contenido">
+                  <h6>Entrada y debounce</h6>
+                  <p>El editor captura cada pulsación y aplaza el procesamiento 300 ms para evitar renderizados redundantes.</p>
+                </div>
+              </li>
+              <li class="pipeline__paso">
+                <span class="pipeline__indice">2</span>
+                <div class="pipeline__contenido">
+                  <h6>Validación sintáctica</h6>
+                  <p><code>mermaid.parse</code> verifica la gramática antes de dibujar y muestra los errores en tiempo real.</p>
+                </div>
+              </li>
+              <li class="pipeline__paso">
+                <span class="pipeline__indice">3</span>
+                <div class="pipeline__contenido">
+                  <h6>Motor de color algorítmico</h6>
+                  <p>Cálculos HSL y ratios de contraste WCAG que deciden el texto accesible sobre cada superficie.</p>
+                </div>
+              </li>
+              <li class="pipeline__paso">
+                <span class="pipeline__indice">4</span>
+                <div class="pipeline__contenido">
+                  <h6>Inyección y renderizado</h6>
+                  <p>Se inyecta la directiva de tema y Mermaid genera el SVG, listo para zoom y paneo.</p>
+                </div>
+              </li>
+              <li class="pipeline__paso">
+                <span class="pipeline__indice">5</span>
+                <div class="pipeline__contenido">
+                  <h6>Persistencia y salida</h6>
+                  <p>El diagrama se guarda en localStorage y se ofrece la suite completa de exportación.</p>
+                </div>
+              </li>
+            </ol>
+          </section>
+
+          <!-- Operaciones internas -->
+          <section class="seccion-documentacion">
+            <h5 class="titulo-seccion"><span class="material-symbols-outlined">terminal</span> Catálogo de operaciones del sistema</h5>
+            <p class="text-secondary small">APIs locales internas documentadas al estilo de un contrato HTTP.</p>
+            <div class="rejilla-operaciones" id="docsOperaciones"></div>
+          </section>
+
+          <!-- Sintaxis soportada -->
+          <section class="seccion-documentacion">
+            <h5 class="titulo-seccion"><span class="material-symbols-outlined">code_blocks</span> Catálogo de sintaxis soportada</h5>
+            <div class="contenedor-tabla-documentacion" id="docsSintaxis"></div>
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================== Modal: historial de versiones ============================== -->
+  <div class="modal fade" id="modalHistorial" tabindex="-1" aria-labelledby="tituloModalHistorial" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title d-flex align-items-center gap-2" id="tituloModalHistorial">
+            <span class="material-symbols-outlined">history</span>
+            Historial de versiones
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          <p class="small text-secondary mb-2">
+            Versiones de <strong id="nombreArchivoHistorial">—</strong>. Se guardan automáticamente
+            las últimas 10 revisiones con cambios.
+          </p>
+          <div class="lista-historial" id="listaHistorial"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-danger btn-sm me-auto" id="botonLimpiarHistorial">
+            <span class="material-symbols-outlined align-middle" style="font-size: 1rem;">delete_sweep</span>
+            Vaciar historial
+          </button>
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================== Modal: atajos de teclado ============================== -->
+  <div class="modal fade" id="modalAtajos" tabindex="-1" aria-labelledby="tituloModalAtajos" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title d-flex align-items-center gap-2" id="tituloModalAtajos">
+            <span class="material-symbols-outlined">keyboard</span>
+            Atajos de teclado
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          <div class="rejilla-atajos" id="listaAtajos"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================== Modal: exportación avanzada ============================== -->
+  <div class="modal fade" id="modalExportacion" tabindex="-1" aria-labelledby="tituloModalExportacion" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title d-flex align-items-center gap-2" id="tituloModalExportacion">
+            <span class="material-symbols-outlined">tune</span>
+            Exportación avanzada en alta resolución
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          <form class="d-flex flex-column gap-3">
+            <div>
+              <label for="selectorFormatoExportacion" class="form-label small fw-semibold">Formato de salida</label>
+              <select class="form-select form-select-sm" id="selectorFormatoExportacion">
+                <option value="png">PNG · rasterizado (alta resolución)</option>
+                <option value="svg">SVG · vectorial puro e independiente</option>
+                <option value="pdf">PDF · A4 con orientación automática</option>
+                <option value="mmd">Código fuente (.mmd)</option>
+              </select>
+            </div>
+
+            <div id="filaResolucionExportacion">
+              <label for="selectorResolucionExportacion" class="form-label small fw-semibold">Resolución / densidad</label>
+              <select class="form-select form-select-sm" id="selectorResolucionExportacion">
+                <option value="1">1x — Estándar</option>
+                <option value="2" selected>2x — Retina / HD</option>
+                <option value="3">3x — Alta densidad</option>
+                <option value="4">4x — Ultra HD / Impresión</option>
+              </select>
+            </div>
+
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" role="switch" id="interruptorPieDePagina" />
+              <label class="form-check-label small" for="interruptorPieDePagina">Incluir pie de página (proyecto, autor y fecha)</label>
+            </div>
+
+            <div class="oms-export-resumen small text-muted" id="resumenExportacion">
+              PNG 2x — Retina / HD · Sin fondo (transparente)
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-primary d-flex align-items-center gap-1" id="botonConfirmarExportacion">
+            <span class="material-symbols-outlined" style="font-size: 1rem;">file_download</span>
+            Generar archivo
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@12/dist/mermaid.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+
+  <script src="js/color-algorithms.js"></script>
+  <script src="js/templates.js"></script>
+  <script src="js/diagram-styler.js"></script>
+  <script src="js/file-system.js"></script>
+  <script src="js/mermaid-renderer.js"></script>
+  <script src="js/exporter.js"></script>
+  <script src="js/docs-viewer.js"></script>
+  <script src="js/keyboard-shortcuts.js"></script>
+  <script src="js/history-manager.js"></script>
+  <script src="js/minimap.js"></script>
+  <script src="js/find-replace.js"></script>
+  <script src="js/export-dialog.js"></script>
+  <script src="js/canvas-viewport.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
