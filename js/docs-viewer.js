@@ -79,6 +79,37 @@
       ].join('\n')
     },
     {
+      metodo: 'RENDER',
+      ruta: '/mermaid/font-awesome',
+      descripcion: 'Convierte los tokens fa:fa-* en glifos vectoriales Font Awesome tras el renderizado.',
+      parametros: 'svgElement · prefijos fa/fas/far/fab/fal/fak',
+      explicacion:
+        'Con htmlLabels:false, Mermaid conserva los tokens "fa:fa-*" como texto plano. El renderer los ' +
+        'detecta en cada <text>/<tspan>, resuelve el glifo con getComputedStyle(::before).content y lo ' +
+        'sustituye por un <tspan> con la tipografía Font Awesome. Así la exportación PNG/PDF HiDPI no ' +
+        'muestra cuadros vacíos y mantiene nitidez vectorial.',
+      codigo: [
+        '// Tras renderizar con htmlLabels:false:',
+        "const token = 'fa:fa-server Servidor Web'; // queda como texto",
+        'MermaidRenderer.verificarYRenderizarIconosFontAwesome(elementoSvg);'
+      ].join('\n')
+    },
+    {
+      metodo: 'FEEDBACK',
+      ruta: '/toast/notify',
+      descripcion: 'Despachador centralizado de alertas SweetAlert2 (toasts, modales y loaders).',
+      parametros: 'tipo · mensaje · opciones',
+      explicacion:
+        'Centraliza las notificaciones toast (arriba-derecha), los diálogos de confirmación y los loaders ' +
+        'para exportaciones pesadas (2x/4x/PDF). Se adapta automáticamente al tema claro/oscuro y evita ' +
+        'duplicar llamadas a Swal.fire en toda la aplicación.',
+      codigo: [
+        'const { Alerts } = window.OpenMermaidStudio;',
+        "Alerts.mostrarNotificacionAccionExitosa('Diagrama guardado exitosamente');",
+        "Alerts.confirmarEliminacion('mi-diagrama.mmd');"
+      ].join('\n')
+    },
+    {
       metodo: 'EXPORT',
       ruta: '/diagram/vector',
       descripcion: 'Serializa el SVG del lienzo como etiqueta autónoma con namespaces y dimensiones.',
@@ -87,7 +118,7 @@
         'Clona el SVG renderizado, fija width/height a partir del viewBox e inyecta opcionalmente un ' +
         'rectángulo de fondo. El resultado es un SVG portable que abre cualquier visor.',
       codigo: [
-        'const { cadenaSvg } = Exporter.serializarSvgAutonomo(elementoSvg, null);',
+        'const { cadenaSvg } = await Exporter.serializarSvgAutonomo(elementoSvg, null);',
         'Exporter.descargarBlobComoArchivo(',
         "  new Blob([cadenaSvg], { type: 'image/svg+xml' }), 'diagrama.svg'",
         ');'
@@ -99,8 +130,9 @@
       descripcion: 'Convierte el SVG a PNG 1x/2x/3x/4x con Canvas nativo, siempre sin fondo (solo el diagrama).',
       parametros: 'elementoSvg · factorEscala · fondoTransparente',
       explicacion:
-        'El SVG se codifica como data URL, se dibuja en un canvas escalado por el factor elegido y se ' +
-        'exporta con toBlob. Para fondos transparentes se omite el relleno del canvas.',
+        'El SVG se codifica como data URL, se dibujan las fuentes Font Awesome incrustadas en base64 para ' +
+        'que los iconos no desaparezcan, y se exporta con toBlob. Para fondos transparentes se omite el ' +
+        'relleno del canvas. El super-sampling evita el pixelado.',
       codigo: [
         'await Exporter.exportarComoPng(elementoSvg, 4, \'diagrama\', {',
         '  fondoTransparente: true, colorFondo: null',
@@ -124,6 +156,19 @@
     { tipo: 'Mindmap', apertura: 'mindmap', casoUso: 'Mapas mentales jerárquicos', plantillaId: 'mindmap' },
     { tipo: 'Pie', apertura: 'pie showData', casoUso: 'Distribución proporcional', plantillaId: 'pie' }
   ];
+
+  /** Ejemplo de diagrama con iconos Font Awesome servido desde el portal. */
+  const CODIGO_EJEMPLO_ICONOS = [
+    'flowchart TD',
+    '  A["fa:fa-server Servidor Web"] --> B["fa:fa-database Base de Datos Central"]',
+    '  B --> C["fa:fa-cloud Nube de Servicios"]',
+    '  C --> D["fab:fa-github Repositorio de Código"]',
+    '  C --> E["fa:fa-shield-halved Seguridad"]',
+    '  subgraph Infraestructura ["fa:fa-docker Contenedores"]',
+    '    F["fa:fa-cog Configuración"] --> G["fa:fa-hard-drive Almacenamiento"]',
+    '  end',
+    '  C --> F'
+  ].join('\n');
 
   let gestorDeArchivosReferenciado = null;
   let alCargarSnippetEnEditor = null;
@@ -166,6 +211,33 @@
       barraDeUso.style.width = `${Math.max(2, porcentajeRedondeado)}%`;
       barraDeUso.classList.toggle('nivel-alto', porcentajeRedondeado >= 80);
     }
+
+    const estadoFontAwesome = document.getElementById('docsEstadoFA');
+    if (estadoFontAwesome) {
+      estadoFontAwesome.textContent = fontAwesomeDisponible() ? 'CDN activo' : 'Pendiente';
+    }
+    const estadoSweetAlert = document.getElementById('docsEstadoSwal');
+    if (estadoSweetAlert) {
+      estadoSweetAlert.textContent = sweetalertDisponible() ? 'Activo' : 'No disponible';
+    }
+  }
+
+  /**
+   * Detecta si la hoja de estilos de Font Awesome está cargada.
+   * @returns {boolean}
+   */
+  function fontAwesomeDisponible() {
+    return typeof window.FontAwesome !== 'undefined' ||
+      !!document.querySelector('link[href*="font-awesome"]') ||
+      !!document.querySelector('style[data-font-awesome]');
+  }
+
+  /**
+   * Detecta si SweetAlert2 está disponible.
+   * @returns {boolean}
+   */
+  function sweetalertDisponible() {
+    return typeof window.Swal !== 'undefined' && typeof window.Swal.fire === 'function';
   }
 
   /**
@@ -330,6 +402,31 @@
   }
 
   /**
+   * Carga en el editor un ejemplo de diagrama con iconos Font Awesome y cierra
+   * el portal de documentación.
+   */
+  function cargarEjemploIconos() {
+    if (typeof alCargarSnippetEnEditor === 'function') {
+      alCargarSnippetEnEditor(CODIGO_EJEMPLO_ICONOS, 'Microservicios con iconos Font Awesome');
+    }
+    ocultarModalDeDocumentacion();
+  }
+
+  /**
+   * Oculta el modal de documentación si existe una instancia de Bootstrap.
+   */
+  function ocultarModalDeDocumentacion() {
+    try {
+      const modal = document.getElementById('modalDocumentacion');
+      if (modal && window.bootstrap && window.bootstrap.Modal) {
+        window.bootstrap.Modal.getOrCreateInstance(modal).hide();
+      }
+    } catch (error) {
+      // Sin Bootstrap disponible el modal simplemente permanece; no es crítico.
+    }
+  }
+
+  /**
    * Asigna texto a un elemento por su id si existe.
    * @param {string} identificador
    * @param {string} texto
@@ -361,6 +458,7 @@
 
   namespaceOpenMermaid.DocsViewer = {
     inicializarVisorDeDocumentacion,
-    refrescarMetricasDeAlmacenamiento
+    refrescarMetricasDeAlmacenamiento,
+    cargarEjemploIconos
   };
 })(window.OpenMermaidStudio = window.OpenMermaidStudio || {});

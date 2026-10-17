@@ -21,9 +21,14 @@
  *    se neutralizan los `<foreignObject>`/imágenes externas antes de dibujar,
  *    de modo que el lienzo nunca quede «tainted» y `toBlob`/`toDataURL`
  *    funcionen incluso al abrir la aplicación con el protocolo `file://`.
+ *  - Las fuentes de Font Awesome se incrustan como `base64` dentro del SVG:
+ *    un SVG cargado como imagen no resuelve tipografías del documento ni,
+ *    necesariamente, `@font-face` remotos, de ahí que sea obligatorio
+ *    incrustarlas para que los iconos aparezcan en PNG/PDF.
  *
  * Este módulo es puro (no conoce la interfaz): toda la retroalimentación al
- * usuario (loaders y toasts de SweetAlert2) vive en `export-dialog.js`.
+ * usuario (loaders y toasts de SweetAlert2) vive en `export-dialog.js` y en el
+ * despachador central `alerts.js`.
  *
  * @module exporter
  */
@@ -39,6 +44,7 @@
   const TIPO_MIME_SVG = 'image/svg+xml;charset=utf-8';
   const TIPO_MIME_SVG_PLANO = 'image/svg+xml';
   const TIPO_MIME_TEXTO = 'text/plain;charset=utf-8';
+  const TIPO_MIME_WOFF2 = 'font/woff2';
 
   // --- Resolución / imprenta ---
   const FACTOR_RASTERIZADO_PDF = 3;
@@ -51,6 +57,16 @@
   const MARCA_DE_AGUA_TAMANO_FUENTE = 12;
   const MARCA_DE_AGUA_RELLENO = 'rgba(15, 23, 42, 0.72)';
   const MARCA_DE_AGUA_TEXTO = '#f8fafc';
+
+  // --- Fuentes Font Awesome (para incrustar como base64 al exportar) ---
+  const URL_WEBCFONTS_FONT_AWESOME = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/webfonts/';
+  const FUENTES_FONT_AWESOME = [
+    { familia: 'Font Awesome 6 Free', peso: '900', archivo: 'fa-solid-900.woff2' },
+    { familia: 'Font Awesome 6 Free', peso: '400', archivo: 'fa-regular-400.woff2' },
+    { familia: 'Font Awesome 6 Brands', peso: '400', archivo: 'fa-brands-400.woff2' }
+  ];
+  /** Caché archivo -> base64|null (null indica que la descarga falló). */
+  const cacheDeFuentesFontAwesome = new Map();
 
   /**
    * Fondos predefinidos ofrecidos por el diálogo de exportación.
@@ -122,6 +138,91 @@
   function calcularDimensionesIntrinsecasDelSvg(elementoSvg) {
     const limites = medirLimitesVectoriales(elementoSvg);
     return { ancho: Math.max(1, Math.ceil(limites.ancho)), alto: Math.max(1, Math.ceil(limites.alto)) };
+  }
+
+  // ------------------------------------------------------------------------
+  // Incrustado de fuentes Font Awesome (base64)
+  // ------------------------------------------------------------------------
+
+  /**
+   * Convierte un ArrayBuffer a base64 sin desbordar la pila (procesa por bloques).
+   * @param {ArrayBuffer} buffer
+   * @returns {string}
+   */
+  function convertirArrayBufferABase64(buffer) {
+    const bytes = new Uint8Array(buffer);
+    const tamanoBloque = 0x8000;
+    let binario = '';
+    for (let indice = 0; indice < bytes.length; indice += tamanoBloque) {
+      binario += String.fromCharCode.apply(null, bytes.subarray(indice, indice + tamanoBloque));
+    }
+    return window.btoa(binario);
+  }
+
+  /**
+   * Descarga una fuente de Font Awesome desde el CDN y la devuelve en base64.
+   * El resultado (o `null` si falla) se memoriza para no repetir la petición.
+   * @param {string} archivo
+   * @returns {Promise<string|null>}
+   */
+  async function obtenerFuenteFontAwesomeEnBase64(archivo) {
+    if (cacheDeFuentesFontAwesome.has(archivo)) {
+      return cacheDeFuentesFontAwesome.get(archivo);
+    }
+
+    let base64 = null;
+    try {
+      if (typeof fetch === 'function') {
+        const respuesta = await fetch(`${URL_WEBCFONTS_FONT_AWESOME}${archivo}`, { mode: 'cors' });
+        if (respuesta && respuesta.ok) {
+          base64 = convertirArrayBufferABase64(await respuesta.arrayBuffer());
+        }
+      }
+    } catch (error) {
+      base64 = null;
+    }
+
+    cacheDeFuentesFontAwesome.set(archivo, base64);
+    return base64;
+  }
+
+  /**
+   * Incrusta las tipografías de Font Awesome dentro del SVG clonado. Si la
+   * descarga a base64 funciona, la fuente queda embebida (imprescindible para
+   * que la rasterización a Canvas resuelva los glifos); en caso contrario se
+   * recurre a la URL remota del CDN como respaldo.
+   * @param {SVGSVGElement} svgElement
+   * @returns {Promise<SVGSVGElement>}
+   */
+  async function incrustarFuentesFontAwesomeEnSvg(svgElement) {
+    if (!svgElement || typeof svgElement.querySelectorAll !== 'function') {
+      return svgElement;
+    }
+
+    const declaraciones = [];
+    for (const fuente of FUENTES_FONT_AWESOME) {
+      const base64 = await obtenerFuenteFontAwesomeEnBase64(fuente.archivo);
+      const origenDeDatos = base64
+        ? `url("data:${TIPO_MIME_WOFF2};base64,${base64}") format("woff2")`
+        : `url("${URL_WEBCFONTS_FONT_AWESOME}${fuente.archivo}") format("woff2")`;
+      declaraciones.push(
+        `@font-face { font-family: "${fuente.familia}"; font-style: normal; font-weight: ${fuente.peso}; font-display: block; src: ${origenDeDatos}; }`
+      );
+    }
+    declaraciones.push(
+      '.fa, .fas, .far, .fab, .openmermaid-icono-font-awesome { font-family: "Font Awesome 6 Free", "Font Awesome 6 Brands", sans-serif; }'
+    );
+
+    const estilo = document.createElementNS(NAMESPACE_SVG, 'style');
+    estilo.setAttribute('data-font-awesome', 'true');
+    estilo.textContent = declaraciones.join(' ');
+
+    if (svgElement.firstChild) {
+      svgElement.insertBefore(estilo, svgElement.firstChild);
+    } else {
+      svgElement.appendChild(estilo);
+    }
+    return svgElement;
   }
 
   // ------------------------------------------------------------------------
@@ -287,9 +388,10 @@
    * @param {SVGSVGElement} elementoSvg
    * @param {{colorFondo:string|null, marcaDeAgua:Object|null}} opcionesResueltas
    * @param {boolean} [paraRasterizado] neutraliza recursos que contaminan el lienzo
-   * @returns {{clonSvg:SVGSVGElement, ancho:number, alto:number, limites:Object}}
+   * @param {boolean} [incrustarFuentes] embebe Font Awesome en base64 en el clon
+   * @returns {Promise<{clonSvg:SVGSVGElement, ancho:number, alto:number, limites:Object}>}
    */
-  function construirSvgExportable(elementoSvg, opcionesResueltas, paraRasterizado) {
+  async function construirSvgExportable(elementoSvg, opcionesResueltas, paraRasterizado, incrustarFuentes) {
     const { colorFondo, marcaDeAgua } = opcionesResueltas;
     const limites = medirLimitesVectoriales(elementoSvg);
     const ancho = Math.max(1, Math.ceil(limites.ancho));
@@ -311,6 +413,10 @@
 
     asegurarEstilosIncrustados(clonSvg);
 
+    if (incrustarFuentes) {
+      await incrustarFuentesFontAwesomeEnSvg(clonSvg);
+    }
+
     if (colorFondo) {
       insertarFondoEnSvg(clonSvg, limites, colorFondo);
     }
@@ -329,10 +435,16 @@
    * @param {string|null} colorFondo color sólido o null para transparencia
    * @param {{texto:string, colorTexto?:string, colorFondo?:string, opacidad?:number}|null} [marcaDeAgua]
    * @param {boolean} [paraRasterizado] neutraliza recursos que contaminan el lienzo
-   * @returns {{cadenaSvg:string, ancho:number, alto:number}}
+   * @param {boolean} [incrustarFuentes] embebe Font Awesome en base64 en el clon
+   * @returns {Promise<{cadenaSvg:string, ancho:number, alto:number}>}
    */
-  function serializarSvgAutonomo(elementoSvg, colorFondo, marcaDeAgua, paraRasterizado) {
-    const { clonSvg, ancho, alto } = construirSvgExportable(elementoSvg, { colorFondo, marcaDeAgua }, paraRasterizado);
+  async function serializarSvgAutonomo(elementoSvg, colorFondo, marcaDeAgua, paraRasterizado, incrustarFuentes) {
+    const { clonSvg, ancho, alto } = await construirSvgExportable(
+      elementoSvg,
+      { colorFondo, marcaDeAgua },
+      paraRasterizado,
+      incrustarFuentes
+    );
     const cuerpo = new XMLSerializer().serializeToString(clonSvg);
     return { cadenaSvg: `${ENCABEZADO_XML}${cuerpo}`, ancho, alto };
   }
@@ -390,7 +502,7 @@
    */
   async function rasterizarSvgALienzo(elementoSvg, factorEscala, colorFondo, marcaDeAgua) {
     const escala = Number.isFinite(factorEscala) && factorEscala > 0 ? factorEscala : 1;
-    const { cadenaSvg, ancho, alto } = serializarSvgAutonomo(elementoSvg, colorFondo, marcaDeAgua, true);
+    const { cadenaSvg, ancho, alto } = await serializarSvgAutonomo(elementoSvg, colorFondo, marcaDeAgua, true, true);
     const imagen = await cargarImagenDesdeCadenaSvg(cadenaSvg);
 
     const lienzo = document.createElement('canvas');
@@ -493,14 +605,16 @@
   // ------------------------------------------------------------------------
 
   /**
-   * Exporta el diagrama como SVG 100 % vectorial y autónomo.
+   * Exporta el diagrama como SVG 100 % vectorial y autónomo (con las fuentes
+   * Font Awesome incrustadas para que los iconos viajen con el archivo).
    * @param {SVGSVGElement} elementoSvg
    * @param {string} nombreArchivo
    * @param {{fondo?:string, colorFondo?:string|null, fondoTransparente?:boolean, marcaDeAgua?:Object|null}} [opciones]
+   * @returns {Promise<{ancho:number, alto:number}>}
    */
-  function exportarSvgLimpio(elementoSvg, nombreArchivo, opciones) {
+  async function exportarSvgLimpio(elementoSvg, nombreArchivo, opciones) {
     const { colorFondo, marcaDeAgua } = resolverOpcionesDeExportacion(opciones);
-    const { cadenaSvg, ancho, alto } = serializarSvgAutonomo(elementoSvg, colorFondo, marcaDeAgua);
+    const { cadenaSvg, ancho, alto } = await serializarSvgAutonomo(elementoSvg, colorFondo, marcaDeAgua, false, true);
     descargarBlobComoArchivo(new Blob([cadenaSvg], { type: TIPO_MIME_SVG }), asegurarExtension(nombreArchivo, 'svg'));
     return { ancho, alto };
   }
@@ -590,12 +704,13 @@
   }
 
   /**
-   * Copia el SVG serializado como texto.
+   * Copia el SVG serializado como texto (sin fuentes embebidas para mantener
+   * ligero el contenido del portapapeles).
    * @param {SVGSVGElement} elementoSvg
    * @returns {Promise<void>}
    */
   async function copiarSvgAlPortapapeles(elementoSvg) {
-    const { cadenaSvg } = serializarSvgAutonomo(elementoSvg, null);
+    const { cadenaSvg } = await serializarSvgAutonomo(elementoSvg, null, null, false, false);
     await navegadorPortapapeles().writeText(cadenaSvg);
   }
 
@@ -634,6 +749,7 @@
     calcularDimensionesIntrinsecasDelSvg,
     construirMarcaDeAguaSvg,
     construirSvgExportable,
+    incrustarFuentesFontAwesomeEnSvg,
     serializarSvgAutonomo,
     descargarBlobComoArchivo,
     exportarSvgLimpio,

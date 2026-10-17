@@ -5,7 +5,8 @@
  *  - inicialización con tema base,
  *  - validación de sintaxis con `mermaid.parse`,
  *  - renderizado a SVG con identificadores únicos,
- *  - normalización de errores para mostrarlos de forma legible.
+ *  - normalización de errores para mostrarlos de forma legible,
+ *  - conversión de tokens `fa:fa-*` en glifos vectoriales Font Awesome.
  *
  * @module mermaid-renderer
  */
@@ -18,12 +19,35 @@
   const ANCHO_INTRINSECO_PREDETERMINADO = 800;
   const ALTO_INTRINSECO_PREDETERMINADO = 600;
 
+  /** Espacio de nombres XML para crear nodos SVG vía DOM. */
+  const ESPACIO_DE_NOMBRES_SVG = 'http://www.w3.org/2000/svg';
+
   /**
    * Etiqueta usada cuando el motor no expone su número de versión. Mermaid 12
    * (al igual que 11) no publica `version` en el objeto global, por lo que se
    * muestra la versión mayor fijada en el CDN del documento.
    */
   const VERSION_MERMAID_PREDETERMINADA = '12';
+
+  /**
+   * Token Font Awesome tal como permanece en el texto cuando Mermaid usa
+   * `htmlLabels: false` (no invoca su parser de iconos): `fa:fa-server`,
+   * `fab:fa-github`, `fas:fa-user`, `far:fa-circle`, `fal:fa-cube`.
+   */
+  const PATRON_TOKEN_FONT_AWESOME = /(fa[bklrs]?):fa-([\w-]+)/g;
+
+  /** Traduce el prefijo de estilo al nombre de clase real de Font Awesome 6. */
+  const CLASE_POR_PREFIJO_FONT_AWESOME = {
+    fa: 'fa-solid',
+    fas: 'fa-solid',
+    far: 'fa-regular',
+    fab: 'fa-brands',
+    fal: 'fa-solid',
+    fak: 'fa-solid'
+  };
+
+  /** Caché de glifos resueltos: `${prefijo}:${nombre}` -> {codigo, familia, peso}. */
+  const cacheDeGlifosFontAwesome = new Map();
 
   let contadorDeRenderizados = 0;
 
@@ -68,9 +92,9 @@
 
     motor.initialize({
       startOnLoad: false,
-      securityLevel: 'strict',
+      securityLevel: 'loose',
       theme: 'base',
-      fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
+      fontFamily: 'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif',
       // Las etiquetas se renderizan como <text>/<tspan> nativos en lugar de
       // <foreignObject>. Es imprescindible para poder rasterizar el SVG a PNG/PDF:
       // un <foreignObject> dentro de un SVG cargado como imagen «contamina» el
@@ -93,7 +117,8 @@
     if (motor) {
       motor.initialize({
         startOnLoad: false,
-        securityLevel: 'strict',
+        securityLevel: 'loose',
+        fontFamily: 'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif',
         ...configuracion
       });
     }
@@ -194,7 +219,8 @@
    *  - conserva/crea un `viewBox` coherente,
    *  - elimina `width`/`height`/`max-width` en píxeles fijos que Mermaid inyecta,
    *  - hace que el SVG ocupe el 100 % de su contenedor sin deformarse,
-   *  - fuerza render preciso de trazos y texto.
+   *  - fuerza render preciso de trazos y texto,
+   *  - convierte los tokens Font Awesome en glifos vectoriales.
    *
    * Sin esta normalización el SVG se rasteriza a un tamaño mínimo y el zoom por
    * transformación CSS amplía ese mapa de bits (aspecto borroso/pixelado).
@@ -239,7 +265,178 @@
     elementoSvg.dataset.anchoIntrinseco = String(dimensiones.ancho);
     elementoSvg.dataset.altoIntrinseco = String(dimensiones.alto);
 
+    verificarYRenderizarIconosFontAwesome(elementoSvg);
+
     return dimensiones;
+  }
+
+  /**
+   * Extrae el carácter Unicode real del valor CSS `content` (que suele llegar
+   * escapado como `"\f233"`). Devuelve cadena vacía si no hay glifo.
+   * @param {string} valorContenido
+   * @returns {string}
+   */
+  function extraerCaracterUnicodeDeContenido(valorContenido) {
+    if (!valorContenido || valorContenido === 'none' || valorContenido === 'normal') {
+      return '';
+    }
+    const texto = valorContenido.trim().replace(/^["']|["']$/g, '');
+    let resultado = '';
+    const patronDeEscapes = /\\([0-9a-fA-F]{1,6})\s?|\\(.)/g;
+    let coincidencia;
+    while ((coincidencia = patronDeEscapes.exec(texto)) !== null) {
+      if (coincidencia[1]) {
+        resultado += String.fromCodePoint(parseInt(coincidencia[1], 16));
+      } else if (coincidencia[2]) {
+        resultado += coincidencia[2];
+      }
+    }
+    return resultado || texto;
+  }
+
+  /**
+   * Resuelve el glifo vectorial de un icono Font Awesome usando un nodo sonda
+   * oculto y `getComputedStyle(..., '::before').content`. El resultado se
+   * memoriza para no tocar el DOM en cada render.
+   * @param {string} prefijo - fa | fas | far | fab | fal | fak
+   * @param {string} nombre - nombre del icono sin el prefijo `fa-`
+   * @returns {{codigo:string, familia:string, peso:string}|null}
+   */
+  function resolverGlifoFontAwesome(prefijo, nombre) {
+    const clave = `${prefijo}:${nombre}`;
+    if (cacheDeGlifosFontAwesome.has(clave)) {
+      return cacheDeGlifosFontAwesome.get(clave);
+    }
+
+    let resultado = null;
+    try {
+      const claseDeEstilo = CLASE_POR_PREFIJO_FONT_AWESOME[prefijo] || 'fa-solid';
+      const sonda = document.createElement('i');
+      sonda.className = `${claseDeEstilo} fa-${nombre}`;
+      sonda.setAttribute('aria-hidden', 'true');
+      sonda.style.cssText = 'position:absolute;left:-9999px;top:-9999px;visibility:hidden;pointer-events:none;';
+      document.body.appendChild(sonda);
+
+      const pseudoElemento = window.getComputedStyle(sonda, '::before');
+      const codigo = extraerCaracterUnicodeDeContenido(pseudoElemento ? pseudoElemento.content : '');
+      if (codigo) {
+        resultado = {
+          codigo,
+          familia: (pseudoElemento && pseudoElemento.fontFamily) || 'Font Awesome 6 Free',
+          peso: (pseudoElemento && pseudoElemento.fontWeight) || '900'
+        };
+      }
+
+      document.body.removeChild(sonda);
+    } catch (error) {
+      resultado = null;
+    }
+
+    cacheDeGlifosFontAwesome.set(clave, resultado);
+    return resultado;
+  }
+
+  /**
+   * Sustituye los tokens `fa:fa-*` presentes en cada nodo `<text>`/`<tspan>` por
+   * un `<tspan>` hijo que dibuja el glifo con la tipografía Font Awesome. Solo
+   * se procesan nodos hoja (sin `<tspan>` descendiente) para no romper la
+   * estructura de líneas que genera Mermaid.
+   * @param {SVGSVGElement} elementoSvg
+   */
+  function convertirTokensFontAwesomeEnGlifos(elementoSvg) {
+    const nodos = elementoSvg.querySelectorAll('text, tspan');
+    nodos.forEach((nodo) => {
+      if (nodo.dataset && nodo.dataset.fontAwesomeProcesado === 'true') {
+        return;
+      }
+      if (nodo.querySelector('tspan')) {
+        return;
+      }
+
+      const textoOriginal = nodo.textContent || '';
+      if (!/(fa[bklrs]?):fa-[\w-]+/.test(textoOriginal)) {
+        return;
+      }
+
+      PATRON_TOKEN_FONT_AWESOME.lastIndex = 0;
+      const fragmento = document.createDocumentFragment();
+      let ultimoIndice = 0;
+      let huboReemplazo = false;
+      let coincidencia;
+
+      while ((coincidencia = PATRON_TOKEN_FONT_AWESOME.exec(textoOriginal)) !== null) {
+        const textoPrevio = textoOriginal.slice(ultimoIndice, coincidencia.index);
+        if (textoPrevio) {
+          fragmento.appendChild(document.createTextNode(textoPrevio));
+        }
+
+        const glifo = resolverGlifoFontAwesome(coincidencia[1], coincidencia[2]);
+        if (glifo) {
+          const tspanIcono = document.createElementNS(ESPACIO_DE_NOMBRES_SVG, 'tspan');
+          tspanIcono.setAttribute('class', 'openmermaid-icono-font-awesome');
+          tspanIcono.setAttribute('font-family', glifo.familia);
+          tspanIcono.setAttribute('font-weight', glifo.peso);
+          tspanIcono.setAttribute('aria-hidden', 'true');
+          tspanIcono.textContent = glifo.codigo;
+          fragmento.appendChild(tspanIcono);
+          fragmento.appendChild(document.createTextNode('\u2009'));
+          huboReemplazo = true;
+        } else {
+          fragmento.appendChild(document.createTextNode(coincidencia[0]));
+        }
+
+        ultimoIndice = PATRON_TOKEN_FONT_AWESOME.lastIndex;
+      }
+
+      if (!huboReemplazo) {
+        return;
+      }
+
+      const textoRestante = textoOriginal.slice(ultimoIndice);
+      if (textoRestante) {
+        fragmento.appendChild(document.createTextNode(textoRestante));
+      }
+
+      nodo.textContent = '';
+      nodo.appendChild(fragmento);
+      if (nodo.dataset) {
+        nodo.dataset.fontAwesomeProcesado = 'true';
+      }
+    });
+  }
+
+  /**
+   * Normaliza nodos `<i class="fa...">` por si el SVG se generó con
+   * `htmlLabels` habilitado (defensivo; en esta app no debería ocurrir).
+   * @param {SVGSVGElement} elementoSvg
+   */
+  function normalizarNodosDeIconoHtml(elementoSvg) {
+    elementoSvg.querySelectorAll('i[class*="fa-"]').forEach((nodo) => {
+      if (!nodo.getAttribute('aria-hidden')) {
+        nodo.setAttribute('aria-hidden', 'true');
+      }
+      if (nodo.hasAttribute('font-size')) {
+        nodo.removeAttribute('font-size');
+      }
+    });
+  }
+
+  /**
+   * Garantiza que los tokens Font Awesome se conviertan en glifos vectoriales
+   * dentro del SVG renderizado, de modo que la exportación PNG/PDF no muestre
+   * cuadros vacíos (los iconos heredan la tipografía incrustada al exportar).
+   * @param {SVGSVGElement} svgElement
+   */
+  function verificarYRenderizarIconosFontAwesome(svgElement) {
+    if (!svgElement || typeof svgElement.querySelectorAll !== 'function') {
+      return;
+    }
+    try {
+      convertirTokensFontAwesomeEnGlifos(svgElement);
+      normalizarNodosDeIconoHtml(svgElement);
+    } catch (error) {
+      // Nunca debe interrumpir el render: si falla, los tokens quedan literales.
+    }
   }
 
   /**
@@ -308,6 +505,7 @@
     normalizarMensajeDeError,
     calcularDimensionesIntrinsecas,
     normalizarSvgRenderizado,
+    verificarYRenderizarIconosFontAwesome,
     intentarRenderizarDiagrama,
     crearTareaConRetardo
   };

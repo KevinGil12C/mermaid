@@ -72,6 +72,7 @@
    * @param {string} [descripcion]
    */
   function mostrarCargador(titulo, descripcion) {
+    if (typeof OpenMermaidStudio.Alerts !== "undefined" && OpenMermaidStudio.Alerts.mostrarCargador) { OpenMermaidStudio.Alerts.mostrarCargador(titulo, descripcion); return; }
     if (!sweetalertDisponible()) {
       return;
     }
@@ -87,6 +88,7 @@
 
   /** Cierra el loader o cualquier alerta visible. */
   function cerrarCargador() {
+    if (typeof OpenMermaidStudio.Alerts !== "undefined" && OpenMermaidStudio.Alerts.cerrarCargador) { OpenMermaidStudio.Alerts.cerrarCargador(); return; }
     if (sweetalertDisponible()) {
       window.Swal.close();
     }
@@ -97,6 +99,7 @@
    * @param {string} mensaje
    */
   function notificarExito(mensaje) {
+    if (typeof OpenMermaidStudio.Alerts !== "undefined" && OpenMermaidStudio.Alerts.notificarExito) { OpenMermaidStudio.Alerts.notificarExito(mensaje); return; }
     if (!sweetalertDisponible()) {
       return;
     }
@@ -140,6 +143,7 @@
    * @param {string} [descripcion]
    */
   function notificarError(titulo, descripcion) {
+    if (typeof OpenMermaidStudio.Alerts !== "undefined" && OpenMermaidStudio.Alerts.notificarError) { OpenMermaidStudio.Alerts.notificarError(titulo, descripcion); return; }
     if (!sweetalertDisponible()) {
       return;
     }

@@ -30,6 +30,7 @@
     FindReplace,
     ExportDialog,
     CanvasViewport,
+    Alerts,
     CODIGO_DIAGRAMA_INICIAL
   } = namespaceOpenMermaid;
 
@@ -63,13 +64,34 @@
     marcaDeAguaActiva: false,
     autorMarcaDeAgua: '',
     carpetasExpandidas: new Set(),
-    alConfirmarEntradaTexto: null,
     manejadorRenderConRetardo: null,
+    ultimoErrorDeSintaxisNotificado: null,
     viewportPequeno: null
   };
 
   /** Caché de referencias al DOM. */
   const ELEMENTOS = {};
+
+  /**
+   * Emite una notificación de éxito a través del despachador central.
+   * @param {string} mensaje
+   */
+  function notificarExitoDeAccion(mensaje) {
+    if (Alerts && typeof Alerts.mostrarNotificacionAccionExitosa === 'function') {
+      Alerts.mostrarNotificacionAccionExitosa(mensaje);
+    }
+  }
+
+  /**
+   * Emite una notificación de error a través del despachador central.
+   * @param {string} titulo
+   * @param {string} [descripcion]
+   */
+  function notificarErrorDeAccion(titulo, descripcion) {
+    if (Alerts && typeof Alerts.notificarError === 'function') {
+      Alerts.notificarError(titulo, descripcion);
+    }
+  }
 
   // ==========================================================================
   // Arranque
@@ -180,8 +202,7 @@
       'modalPlantillas', 'galeriaPlantillas', 'modalGuardarComo', 'formularioGuardarComo',
       'campoNombreArchivo', 'selectorCarpetaDestino', 'errorGuardarComo',
       'modalRespaldo', 'botonExportarRespaldo', 'entradaImportarRespaldo', 'mensajeRespaldo',
-      'modalEntradaTexto', 'formularioEntradaTexto', 'tituloEntradaTexto', 'etiquetaEntradaTexto',
-      'campoEntradaTexto', 'errorEntradaTexto', 'modalDocumentacion', 'modalAtajos', 'listaAtajos', 'modalHistorial', 'listaHistorial', 'nombreArchivoHistorial', 'botonLimpiarHistorial',
+      'modalDocumentacion', 'modalAtajos', 'listaAtajos', 'modalHistorial', 'listaHistorial', 'nombreArchivoHistorial', 'botonLimpiarHistorial',
     'modalExportacion', 'selectorFormatoExportacion', 'selectorResolucionExportacion',
     'interruptorPieDePagina', 'botonConfirmarExportacion',
     'filaResolucionExportacion', 'resumenExportacion', 'abrirModalExportacion'
@@ -209,7 +230,6 @@
     registrarEventosDeDocumentacion();
     registrarEventosDeTemaYSidebar();
     registrarEventoDelSeparador();
-    registrarEventoDelModalDeTexto();
     registrarEventosDeBusqueda();
     registrarEventosDeHistorial();
     registrarEventosDeMinimapa();
@@ -280,6 +300,9 @@
       sincronizarControlesDeDiseno();
       guardarPreferenciasEnConfiguracion();
       programarRenderizado();
+      const armonia = ColorAlgorithms.obtenerArmoniasDisponibles()
+        .find((opcion) => opcion.clave === estado.tipoEsquema);
+      notificarExitoDeAccion(`Nueva paleta cromática ${armonia ? armonia.etiqueta : 'aleatoria'} aplicada correctamente`);
     });
 
     ELEMENTOS.interruptorClasesEstilo.addEventListener('change', (evento) => {
@@ -292,6 +315,7 @@
       guardarDiagramaActivoSilencioso();
       estado.ajusteAutomaticoDelLienzo = true;
       ejecutarRenderizado();
+      notificarExitoDeAccion('Paleta algorítmica aplicada al diagrama');
     });
 
     ELEMENTOS.botonAlternarOrientacion.addEventListener('click', alternarOrientacionDelDiagrama);
@@ -310,6 +334,10 @@
     ejecutarRenderizado();
     actualizarEstadoDeAlmacenamiento();
     establecerEstadoRenderizado('Orientación alternada', 'exito');
+    const orientacion = /^(flowchart|graph)\s+(LR|RL)\b/m.test(ELEMENTOS.editorCodigo.value)
+      ? 'Horizontal (LR)'
+      : 'Vertical (TD)';
+    notificarExitoDeAccion(`Diagrama reorientado a ${orientacion}`);
   }
 
   /** Eventos de paneo y zoom del lienzo. */
@@ -322,6 +350,7 @@
       marcarVistaAjustadaManualmente();
       estado.zoom = 1;
       centrarDiagramaEnLienzo();
+      notificarExitoDeAccion('Vista restablecida al 100%');
     });
     ELEMENTOS['zoom-level-text']?.addEventListener('click', () => {
       marcarVistaAjustadaManualmente();
@@ -332,6 +361,7 @@
       marcarVistaAjustadaManualmente();
       estado.zoom = 1;
       centrarDiagramaEnLienzo();
+      notificarExitoDeAccion('Vista restablecida al 100%');
     });
     ELEMENTOS.botonCentrar?.addEventListener('click', () => {
       marcarVistaAjustadaManualmente();
@@ -340,10 +370,12 @@
     ELEMENTOS.botonAjustar?.addEventListener('click', () => {
       estado.ajusteAutomaticoDelLienzo = true;
       ajustarDiagramaAlLienzo();
+      notificarExitoDeAccion('Diagrama centrado y ajustado al lienzo');
     });
     ELEMENTOS['btn-fit-screen']?.addEventListener('click', () => {
       estado.ajusteAutomaticoDelLienzo = true;
       ajustarDiagramaAlLienzo();
+      notificarExitoDeAccion('Diagrama centrado y ajustado al lienzo');
     });
 
     ELEMENTOS['btn-fullscreen']?.addEventListener('click', () => {
@@ -354,6 +386,7 @@
       }
       establecerModoPresentacion(true);
       solicitarPantallaCompleta();
+      notificarExitoDeAccion('Modo presentación activado (Presiona Esc o F10 para salir)');
     });
     ELEMENTOS.lienzo.addEventListener('pointerdown', iniciarPaneo);
     ELEMENTOS.lienzo.addEventListener('pointermove', moverPaneo);
@@ -365,37 +398,62 @@
   /** Eventos de exportación. */
   function registrarEventosDeExportacion() {
     ELEMENTOS.exportarSvg.addEventListener('click', () => exportarConSvg((svg) =>
-      Exporter.exportarComoSvg(svg, obtenerNombreBaseArchivo(), construirOpcionesDeExportacion())));
+      Exporter.exportarComoSvg(svg, obtenerNombreBaseArchivo(), construirOpcionesDeExportacion()), {
+      mensajeExito: 'Archivo SVG descargado en ultra alta definición'
+    }));
 
     ELEMENTOS.exportarPng1x.addEventListener('click', () => exportarConSvg((svg) =>
-      Exporter.exportarComoPng(svg, 1, obtenerNombreBaseArchivo(), construirOpcionesDeExportacion())));
+      Exporter.exportarComoPng(svg, 1, obtenerNombreBaseArchivo(), construirOpcionesDeExportacion()), {
+      mensajeExito: 'Archivo PNG 1x descargado'
+    }));
 
     ELEMENTOS.exportarPng2x.addEventListener('click', () => exportarConSvg((svg) =>
-      Exporter.exportarComoPng(svg, 2, obtenerNombreBaseArchivo(), construirOpcionesDeExportacion())));
+      Exporter.exportarComoPng(svg, 2, obtenerNombreBaseArchivo(), construirOpcionesDeExportacion()), {
+      cargando: true,
+      mensajeExito: 'Archivo PNG 2x descargado en ultra alta definición'
+    }));
 
     ELEMENTOS.exportarPng4x.addEventListener('click', () => exportarConSvg((svg) =>
-      Exporter.exportarComoPng(svg, 4, obtenerNombreBaseArchivo(), construirOpcionesDeExportacion())));
+      Exporter.exportarComoPng(svg, 4, obtenerNombreBaseArchivo(), construirOpcionesDeExportacion()), {
+      cargando: true,
+      mensajeExito: 'Archivo PNG 4x descargado en ultra alta definición'
+    }));
 
     ELEMENTOS.exportarPdf.addEventListener('click', () => exportarConSvg((svg) =>
-      Exporter.exportarComoPdf(svg, obtenerNombreBaseArchivo(), construirOpcionesDeExportacion())));
+      Exporter.exportarComoPdf(svg, obtenerNombreBaseArchivo(), construirOpcionesDeExportacion()), {
+      cargando: true,
+      mensajeExito: 'Archivo PDF vectorial descargado en ultra alta definición'
+    }));
 
     ELEMENTOS.exportarCodigoMmd.addEventListener('click', () => {
       Exporter.exportarCodigoFuente(ELEMENTOS.editorCodigo.value, obtenerNombreBaseArchivo());
       establecerEstadoRenderizado('Código .mmd exportado', 'exito');
+      notificarExitoDeAccion('Código fuente exportado (.mmd)');
     });
 
-    ELEMENTOS.copiarCodigo.addEventListener('click', () => ejecutarCopiaProtegida(() =>
-      Exporter.copiarCodigoFuenteAlPortapapeles(ELEMENTOS.editorCodigo.value)));
+    ELEMENTOS.copiarCodigo.addEventListener('click', () => ejecutarCopiaProtegida(
+      () => Exporter.copiarCodigoFuenteAlPortapapeles(ELEMENTOS.editorCodigo.value),
+      'Código Mermaid copiado al portapapeles'
+    ));
 
-    ELEMENTOS.copiarSvg.addEventListener('click', () => exportarConSvg((svg) =>
-      Exporter.copiarSvgAlPortapapeles(svg)));
+    ELEMENTOS.copiarSvg.addEventListener('click', () => exportarConSvg(
+      (svg) => Exporter.copiarSvgAlPortapapeles(svg),
+      { mensajeExito: 'Vector SVG copiado al portapapeles' }
+    ));
 
-    ELEMENTOS.copiarPng.addEventListener('click', () => exportarConSvg((svg) =>
-      Exporter.copiarPngAlPortapapeles(svg, construirOpcionesDeExportacion())));
+    ELEMENTOS.copiarPng.addEventListener('click', () => exportarConSvg(
+      (svg) => Exporter.copiarPngAlPortapapeles(svg, construirOpcionesDeExportacion()),
+      { mensajeExito: 'Imagen PNG copiada al portapapeles' }
+    ));
 
     ELEMENTOS.interruptorMarcaDeAgua.addEventListener('change', (evento) => {
       estado.marcaDeAguaActiva = evento.target.checked;
       guardarPreferenciasEnConfiguracion();
+      if (Alerts && typeof Alerts.notificarInfo === 'function') {
+        Alerts.notificarInfo(estado.marcaDeAguaActiva
+          ? 'Marca de agua activada en las exportaciones'
+          : 'Marca de agua desactivada');
+      }
     });
 
     ELEMENTOS.autorMarcaDeAgua.addEventListener('input', (evento) => {
@@ -405,11 +463,7 @@
 
     if (ELEMENTOS.abrirModalExportacion) {
       ELEMENTOS.abrirModalExportacion.addEventListener('click', () => {
-        if (typeof ExportDialog.abrirDialogoDeExportacion === 'function') {
-          ExportDialog.abrirDialogoDeExportacion();
-        } else {
-          ExportDialog.abrirDialogoDeExportacion();
-        }
+        ExportDialog.abrirDialogoDeExportacion();
       });
     }
   }
@@ -436,6 +490,10 @@
       DocsViewer.refrescarMetricasDeAlmacenamiento();
       bootstrap.Modal.getOrCreateInstance(ELEMENTOS.modalDocumentacion).show();
     });
+    const botonEjemploIconos = document.getElementById('docsCargarEjemploIconos');
+    if (botonEjemploIconos) {
+      botonEjemploIconos.addEventListener('click', () => DocsViewer.cargarEjemploIconos());
+    }
   }
 
   /** Tema claro/oscuro y sidebar. */
@@ -445,6 +503,7 @@
       estado.gestorDeArchivos.actualizarConfiguracion({ tema: estado.modoOscuro ? 'dark' : 'light' });
       aplicarTemaVisual();
       aplicarCambioDePaleta();
+      notificarExitoDeAccion(estado.modoOscuro ? 'Modo oscuro activado' : 'Modo claro activado');
     });
 
     ELEMENTOS.botonToggleSidebar.addEventListener('click', alternarSidebar);
@@ -493,29 +552,6 @@
       document.addEventListener('pointerup', soltar);
     };
     ELEMENTOS.separadorPaneles.addEventListener('pointerdown', iniciarArrastre);
-  }
-
-  /** Modal genérico de entrada de texto. */
-  function registrarEventoDelModalDeTexto() {
-    ELEMENTOS.formularioEntradaTexto.addEventListener('submit', (evento) => {
-      evento.preventDefault();
-      const valorIngresado = ELEMENTOS.campoEntradaTexto.value;
-      if (typeof estado.alConfirmarEntradaTexto !== 'function') {
-        return;
-      }
-      const mensajeDeError = estado.alConfirmarEntradaTexto(valorIngresado);
-      if (mensajeDeError) {
-        ELEMENTOS.errorEntradaTexto.textContent = mensajeDeError;
-        return;
-      }
-      ELEMENTOS.errorEntradaTexto.textContent = '';
-      bootstrap.Modal.getOrCreateInstance(ELEMENTOS.modalEntradaTexto).hide();
-    });
-
-    ELEMENTOS.modalEntradaTexto.addEventListener('hidden.bs.modal', () => {
-      estado.alConfirmarEntradaTexto = null;
-      ELEMENTOS.errorEntradaTexto.textContent = '';
-    });
   }
 
   // ==========================================================================
@@ -664,6 +700,7 @@
           HistoryManager.limpiarHistorial();
         }
         establecerEstadoRenderizado('Historial vaciado', 'exito');
+        notificarExitoDeAccion('Historial de versiones vaciado');
       });
     }
   }
@@ -697,6 +734,7 @@
     establecerEstadoRenderizado('Versión restaurada', 'exito');
     // Guardar la versión restaurada como el estado actual
     guardarDiagramaActivoSilencioso();
+    notificarExitoDeAccion('Versión del historial restaurada en el editor');
   }
 
   /** Eventos del minimapa. */
@@ -721,6 +759,9 @@
     }
     ELEMENTOS.botonMinimapa.classList.toggle('activo', estado.minimapaVisible);
     guardarPreferenciasEnConfiguracion();
+    if (Alerts && typeof Alerts.notificarInfo === 'function') {
+      Alerts.notificarInfo(estado.minimapaVisible ? 'Minimapa visible' : 'Minimapa oculto');
+    }
   }
 
   /** @returns {Object} datos de vista que alimentan al minimapa. */
@@ -861,6 +902,7 @@
     estado.zoom = 1;
     centrarDiagramaEnLienzo();
     sincronizarMinimapa();
+    notificarExitoDeAccion('Vista restablecida al 100%');
   }
 
   /** Exporta rápidamente el diagrama como SVG vectorial. */
@@ -1118,122 +1160,124 @@
       establecerEstadoRenderizado('Diagrama guardado', 'exito');
       actualizarEstadoDeAlmacenamiento();
       refrescarHistorialDeVersiones();
+      const archivo = estado.gestorDeArchivos.obtenerArchivoActivo();
+      const carpeta = archivo ? estado.gestorDeArchivos.obtenerCarpetaPorId(archivo.carpetaId) : null;
+      const nombreCarpeta = carpeta ? carpeta.nombre : 'la raíz';
+      notificarExitoDeAccion(`Diagrama guardado exitosamente en '${nombreCarpeta}'`);
     } else {
       establecerEstadoRenderizado(resultado.mensajeError || 'No se pudo guardar', 'error');
+      notificarErrorDeAccion('No se pudo guardar', resultado.mensajeError);
     }
   }
 
-  /** Solicita el nombre de una carpeta nueva. */
-  function solicitarNuevaCarpeta() {
-    abrirModalEntradaTexto({
-      titulo: 'Nueva carpeta',
-      etiqueta: 'Nombre de la carpeta',
-      valorInicial: '',
-      textoBoton: 'Crear carpeta',
-      alConfirmar: (nombre) => {
-        const resultado = estado.gestorDeArchivos.crearCarpeta(nombre);
-        if (!resultado.exito) {
-          return resultado.mensajeError;
-        }
-        estado.carpetasExpandidas.add(resultado.carpeta.id);
-        renderizarArbolDeArchivos();
-        return null;
-      }
-    });
+  /** Solicita el nombre de una carpeta nueva mediante SweetAlert2. */
+  async function solicitarNuevaCarpeta() {
+    const nombre = await solicitarNombreConSweetAlert('Nueva carpeta', 'Nombre de la carpeta', '', 'Crear carpeta');
+    if (nombre === null) {
+      return;
+    }
+    const resultado = estado.gestorDeArchivos.crearCarpeta(nombre);
+    if (!resultado.exito) {
+      notificarErrorDeAccion('No se pudo crear la carpeta', resultado.mensajeError);
+      return;
+    }
+    estado.carpetasExpandidas.add(resultado.carpeta.id);
+    renderizarArbolDeArchivos();
+    notificarExitoDeAccion(`Carpeta '${resultado.carpeta.nombre}' creada con éxito`);
   }
 
   /** Renombra una carpeta. */
-  function solicitarRenombrarCarpeta(carpeta) {
-    abrirModalEntradaTexto({
-      titulo: 'Renombrar carpeta',
-      etiqueta: 'Nuevo nombre',
-      valorInicial: carpeta.nombre,
-      textoBoton: 'Renombrar',
-      alConfirmar: (nombre) => {
-        const resultado = estado.gestorDeArchivos.renombrarCarpeta(carpeta.id, nombre);
-        if (!resultado.exito) {
-          return resultado.mensajeError;
-        }
-        renderizarArbolDeArchivos();
-        return null;
-      }
-    });
+  async function solicitarRenombrarCarpeta(carpeta) {
+    const nombre = await solicitarNombreConSweetAlert('Renombrar carpeta', 'Nuevo nombre', carpeta.nombre, 'Renombrar');
+    if (nombre === null) {
+      return;
+    }
+    const resultado = estado.gestorDeArchivos.renombrarCarpeta(carpeta.id, nombre);
+    if (!resultado.exito) {
+      notificarErrorDeAccion('No se pudo renombrar la carpeta', resultado.mensajeError);
+      return;
+    }
+    renderizarArbolDeArchivos();
+    notificarExitoDeAccion(`Carpeta '${nombre.trim()}' renombrada con éxito`);
   }
 
   /** Renombra un archivo. */
-  function solicitarRenombrarArchivo(archivo) {
-    abrirModalEntradaTexto({
-      titulo: 'Renombrar diagrama',
-      etiqueta: 'Nuevo nombre',
-      valorInicial: archivo.nombre,
-      textoBoton: 'Renombrar',
-      alConfirmar: (nombre) => {
-        const resultado = estado.gestorDeArchivos.renombrarArchivo(archivo.id, nombre);
-        if (!resultado.exito) {
-          return resultado.mensajeError;
-        }
-        if (archivo.id === estado.gestorDeArchivos.obtenerIdArchivoActivo()) {
-          ELEMENTOS.nombreArchivoActivo.textContent = nombre.trim();
-        }
-        renderizarArbolDeArchivos();
-        return null;
-      }
-    });
+  async function solicitarRenombrarArchivo(archivo) {
+    const nombre = await solicitarNombreConSweetAlert('Renombrar diagrama', 'Nuevo nombre', archivo.nombre, 'Renombrar');
+    if (nombre === null) {
+      return;
+    }
+    const resultado = estado.gestorDeArchivos.renombrarArchivo(archivo.id, nombre);
+    if (!resultado.exito) {
+      notificarErrorDeAccion('No se pudo renombrar el diagrama', resultado.mensajeError);
+      return;
+    }
+    if (archivo.id === estado.gestorDeArchivos.obtenerIdArchivoActivo()) {
+      ELEMENTOS.nombreArchivoActivo.textContent = nombre.trim();
+    }
+    renderizarArbolDeArchivos();
+    notificarExitoDeAccion(`Diagrama '${nombre.trim()}' renombrado con éxito`);
   }
 
-  /** Elimina una carpeta previa confirmación. */
-  function eliminarCarpetaConConfirmacion(carpeta) {
-    if (typeof window.Swal !== 'undefined') {
-      Swal.fire({
-        title: '¿Eliminar carpeta?',
-        text: `¿Eliminar la carpeta "${carpeta.nombre}"? Sus diagramas se moverán a la raíz.`,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Eliminar',
-        cancelButtonText: 'Cancelar'
-      }).then((result) => {
-        if (result.isConfirmed) {
-          const resultado = estado.gestorDeArchivos.eliminarCarpeta(carpeta.id);
-          if (!resultado.exito) { establecerEstadoRenderizado(resultado.mensajeError, 'error'); return; }
-          renderizarArbolDeArchivos(); actualizarEstadoDeAlmacenamiento();
-        }
-      });
+  /**
+   * Pide un nombre de texto con SweetAlert2 (sustituye al modal genérico).
+   * @param {string} titulo
+   * @param {string} etiqueta
+   * @param {string} valorInicial
+   * @param {string} textoConfirmar
+   * @returns {Promise<string|null>}
+   */
+  async function solicitarNombreConSweetAlert(titulo, etiqueta, valorInicial, textoConfirmar) {
+    if (!Alerts || typeof Alerts.solicitarTexto !== 'function') {
+      return null;
+    }
+    const valor = await Alerts.solicitarTexto(titulo, etiqueta, valorInicial, {
+      requerido: true,
+      confirmarTexto: textoConfirmar
+    });
+    return valor === null ? null : valor.trim();
+  }
+
+  /** Elimina una carpeta previa confirmación con SweetAlert2. */
+  async function eliminarCarpetaConConfirmacion(carpeta) {
+    const confirmado = Alerts && typeof Alerts.confirmarAccion === 'function'
+      ? await Alerts.confirmarAccion(
+        `¿Eliminar la carpeta '${carpeta.nombre}'?`,
+        'Los diagramas contenidos se moverán a la raíz. Esta acción no se puede deshacer.',
+        { confirmarTexto: 'Sí, eliminar' }
+      )
+      : true;
+    if (!confirmado) {
       return;
     }
     const resultado = estado.gestorDeArchivos.eliminarCarpeta(carpeta.id);
     if (!resultado.exito) {
       establecerEstadoRenderizado(resultado.mensajeError, 'error');
+      notificarErrorDeAccion('No se pudo eliminar la carpeta', resultado.mensajeError);
       return;
     }
     renderizarArbolDeArchivos();
     actualizarEstadoDeAlmacenamiento();
+    notificarExitoDeAccion(`Carpeta '${carpeta.nombre}' eliminada correctamente`);
   }
 
-  /** Elimina un archivo previa confirmación. */
-  function eliminarArchivoConConfirmacion(archivo) {
-    if (typeof window.Swal !== 'undefined') {
-      Swal.fire({
-        title: '¿Eliminar diagrama?',
-        text: archivo.nombre,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Eliminar',
-        cancelButtonText: 'Cancelar'
-      }).then((result) => {
-        if (result.isConfirmed) {
-          const eraActivo = archivo.id === estado.gestorDeArchivos.obtenerIdArchivoActivo();
-          const resultado = estado.gestorDeArchivos.eliminarArchivo(archivo.id);
-          if (!resultado.exito) { establecerEstadoRenderizado(resultado.mensajeError, 'error'); return; }
-          if (eraActivo) { abrirArchivoActivo(); ejecutarRenderizado(); }
-          renderizarArbolDeArchivos(); actualizarEstadoDeAlmacenamiento();
-        }
-      });
+  /** Elimina un archivo previa confirmación con SweetAlert2. */
+  async function eliminarArchivoConConfirmacion(archivo) {
+    const confirmado = Alerts && typeof Alerts.confirmarAccion === 'function'
+      ? await Alerts.confirmarAccion(
+        '¿Eliminar el diagrama?',
+        `'${archivo.nombre}' se eliminará de forma permanente. Esta acción no se puede deshacer.`,
+        { confirmarTexto: 'Sí, eliminar' }
+      )
+      : true;
+    if (!confirmado) {
       return;
     }
     const eraActivo = archivo.id === estado.gestorDeArchivos.obtenerIdArchivoActivo();
     const resultado = estado.gestorDeArchivos.eliminarArchivo(archivo.id);
     if (!resultado.exito) {
       establecerEstadoRenderizado(resultado.mensajeError, 'error');
+      notificarErrorDeAccion('No se pudo eliminar el diagrama', resultado.mensajeError);
       return;
     }
     if (eraActivo) {
@@ -1242,10 +1286,23 @@
     }
     renderizarArbolDeArchivos();
     actualizarEstadoDeAlmacenamiento();
+    notificarExitoDeAccion(`Diagrama '${archivo.nombre}' eliminado correctamente`);
   }
 
-  /** Crea un diagrama nuevo en la carpeta del activo. */
-  function crearNuevoDiagrama() {
+  /** Crea un diagrama nuevo en la carpeta del activo, avisando de cambios sin guardar. */
+  async function crearNuevoDiagrama() {
+    if (hayCambiosSinGuardar()) {
+      const continuar = Alerts && typeof Alerts.confirmarAccion === 'function'
+        ? await Alerts.confirmarAccion(
+          '¿Descartar los cambios sin guardar?',
+          'Se creará un diagrama nuevo y los cambios del editor que no hayas guardado se perderán.',
+          { confirmarTexto: 'Crear diagrama nuevo' }
+        )
+        : true;
+      if (!continuar) {
+        return;
+      }
+    }
     const archivoActivo = estado.gestorDeArchivos.obtenerArchivoActivo();
     const carpetaDestino = archivoActivo ? archivoActivo.carpetaId : estado.gestorDeArchivos.obtenerIdCarpetaRaiz();
     const archivoNuevo = estado.gestorDeArchivos.crearArchivo({
@@ -1258,6 +1315,20 @@
     renderizarArbolDeArchivos();
     actualizarEstadoDeAlmacenamiento();
     ejecutarRenderizado();
+    const carpeta = estado.gestorDeArchivos.obtenerCarpetaPorId(carpetaDestino);
+    notificarExitoDeAccion(`Diagrama nuevo creado en '${carpeta ? carpeta.nombre : 'la raíz'}'`);
+  }
+
+  /**
+   * Indica si el editor tiene cambios no persistidos respecto al archivo activo.
+   * @returns {boolean}
+   */
+  function hayCambiosSinGuardar() {
+    const archivoActivo = estado.gestorDeArchivos.obtenerArchivoActivo();
+    if (!archivoActivo) {
+      return ELEMENTOS.editorCodigo.value.trim().length > 0;
+    }
+    return ELEMENTOS.editorCodigo.value !== archivoActivo.codigo;
   }
 
   // ==========================================================================
@@ -1303,6 +1374,10 @@
     renderizarArbolDeArchivos();
     actualizarEstadoDeAlmacenamiento();
     establecerEstadoRenderizado('Guardado como nuevo diagrama', 'exito');
+    const carpetaDestino = estado.gestorDeArchivos.obtenerCarpetaPorId(resultado.archivo.carpetaId);
+    notificarExitoDeAccion(
+      `Diagrama guardado como '${resultado.archivo.nombre}' en '${carpetaDestino ? carpetaDestino.nombre : 'la raíz'}'`
+    );
   }
 
   // ==========================================================================
@@ -1317,6 +1392,7 @@
       respaldo.nombreArchivo
     );
     ELEMENTOS.mensajeRespaldo.textContent = 'Respaldo exportado correctamente.';
+    notificarExitoDeAccion('Respaldo del espacio de trabajo exportado correctamente');
   }
 
   /**
@@ -1334,6 +1410,7 @@
       const resultado = estado.gestorDeArchivos.importarEspacioDeTrabajoDesdeJson(String(lector.result));
       if (!resultado.exito) {
         ELEMENTOS.mensajeRespaldo.textContent = `Error: ${resultado.mensajeError}`;
+        notificarErrorDeAccion('No se pudo importar el respaldo', resultado.mensajeError);
       } else {
         ELEMENTOS.mensajeRespaldo.textContent = 'Respaldo restaurado correctamente.';
         renderizarArbolDeArchivos();
@@ -1341,39 +1418,11 @@
         actualizarEstadoDeAlmacenamiento();
         DocsViewer.refrescarMetricasDeAlmacenamiento();
         ejecutarRenderizado();
+        notificarExitoDeAccion('Respaldo del espacio de trabajo restaurado correctamente');
       }
       ELEMENTOS.entradaImportarRespaldo.value = '';
     };
     lector.readAsText(archivoSeleccionado);
-  }
-
-  // ==========================================================================
-  // Modal genérico de entrada de texto
-  // ==========================================================================
-
-  /**
-   * Abre el modal de entrada de texto.
-   * @param {Object} opciones
-   * @param {string} opciones.titulo
-   * @param {string} opciones.etiqueta
-   * @param {string} opciones.valorInicial
-   * @param {string} opciones.textoBoton
-   * @param {(valor:string)=>string|null} opciones.alConfirmar
-   */
-  function abrirModalEntradaTexto(opciones) {
-    estado.alConfirmarEntradaTexto = opciones.alConfirmar;
-    ELEMENTOS.tituloEntradaTexto.textContent = opciones.titulo;
-    ELEMENTOS.etiquetaEntradaTexto.textContent = opciones.etiqueta;
-    ELEMENTOS.campoEntradaTexto.value = opciones.valorInicial || '';
-    ELEMENTOS.errorEntradaTexto.textContent = '';
-
-    const modal = bootstrap.Modal.getOrCreateInstance(ELEMENTOS.modalEntradaTexto);
-    ELEMENTOS.modalEntradaTexto.addEventListener('shown.bs.modal', function seleccionarCampo() {
-      ELEMENTOS.campoEntradaTexto.focus();
-      ELEMENTOS.campoEntradaTexto.select();
-      ELEMENTOS.modalEntradaTexto.removeEventListener('shown.bs.modal', seleccionarCampo);
-    });
-    modal.show();
   }
 
   // ==========================================================================
@@ -1504,6 +1553,7 @@
     renderizarArbolDeArchivos();
     actualizarEstadoDeAlmacenamiento();
     ejecutarRenderizado();
+    notificarExitoDeAccion(`Plantilla '${plantilla.nombre}' cargada como nuevo diagrama`);
   }
 
   /**
@@ -1520,6 +1570,7 @@
     ejecutarRenderizado();
     actualizarEstadoDeAlmacenamiento();
     establecerEstadoRenderizado(`Plantilla "${nombreSugerido}" cargada`, 'exito');
+    notificarExitoDeAccion(`Plantilla '${nombreSugerido}' cargada en el editor`);
   }
 
   // ==========================================================================
@@ -1560,6 +1611,7 @@
       ELEMENTOS.superposicionVacia.hidden = true;
       ELEMENTOS.estadoSintaxis.textContent = 'Sintaxis: válida';
       establecerEstadoRenderizado('Diagrama actualizado', 'exito');
+      estado.ultimoErrorDeSintaxisNotificado = null;
       dimensionarContenedorDelDiagrama(resultado.dimensiones);
       if (estado.ajusteAutomaticoDelLienzo) {
         ajustarDiagramaAlLienzo();
@@ -1570,6 +1622,12 @@
       mostrarError(resultado.mensajeError);
       ELEMENTOS.estadoSintaxis.textContent = 'Sintaxis: error';
       establecerEstadoRenderizado('Error de sintaxis', 'error');
+      if (estado.ultimoErrorDeSintaxisNotificado !== resultado.mensajeError) {
+        estado.ultimoErrorDeSintaxisNotificado = resultado.mensajeError;
+        if (Alerts && typeof Alerts.notificarErrorDeSintaxis === 'function') {
+          Alerts.notificarErrorDeSintaxis('Error de sintaxis en el diagrama');
+        }
+      }
     }
   }
 
@@ -1957,24 +2015,32 @@
   /**
    * Ejecuta una exportación que necesita el SVG renderizado.
    * @param {(svg:SVGSVGElement)=>void|Promise<void>} tarea
+   * @param {{cargando?:boolean, mensajeExito?:string}} [opciones]
    */
-  async function exportarConSvg(tarea) {
+  async function exportarConSvg(tarea, opciones) {
+    const configuracion = opciones || {};
     const svg = ELEMENTOS.contenidoLienzo.querySelector('svg');
     if (!svg) {
       establecerEstadoRenderizado('No hay diagrama para exportar', 'error');
-      if (ExportDialog && typeof ExportDialog.notificarError === 'function') {
-        ExportDialog.notificarError('Nada que exportar', 'Renderiza un diagrama antes de exportarlo.');
-      }
+      notificarErrorDeAccion('Nada que exportar', 'Renderiza un diagrama antes de exportarlo.');
       return;
+    }
+    if (configuracion.cargando && Alerts && typeof Alerts.mostrarCargador === 'function') {
+      Alerts.mostrarCargador();
     }
     try {
       establecerEstadoRenderizado('Exportando…', 'procesando');
       await tarea(svg);
       establecerEstadoRenderizado('Exportación completada', 'exito');
+      if (configuracion.mensajeExito) {
+        notificarExitoDeAccion(configuracion.mensajeExito);
+      }
     } catch (error) {
       establecerEstadoRenderizado('Error al exportar', 'error');
-      if (ExportDialog && typeof ExportDialog.notificarError === 'function') {
-        ExportDialog.notificarError('Error al exportar', error && error.message ? error.message : String(error));
+      notificarErrorDeAccion('Error al exportar', error && error.message ? error.message : String(error));
+    } finally {
+      if (configuracion.cargando && Alerts && typeof Alerts.cerrarCargador === 'function') {
+        Alerts.cerrarCargador();
       }
     }
   }
@@ -1982,19 +2048,16 @@
   /**
    * Envuelve una copia al portapapeles con manejo de errores.
    * @param {()=>Promise<void>} tarea
+   * @param {string} [mensajeExito]
    */
-  async function ejecutarCopiaProtegida(tarea) {
+  async function ejecutarCopiaProtegida(tarea, mensajeExito) {
     try {
       await tarea();
       establecerEstadoRenderizado('Copiado al portapapeles', 'exito');
-      if (ExportDialog && typeof ExportDialog.notificarExito === 'function') {
-        ExportDialog.notificarExito('Copiado al portapapeles');
-      }
+      notificarExitoDeAccion(mensajeExito || 'Copiado al portapapeles');
     } catch (error) {
       establecerEstadoRenderizado('No se pudo copiar', 'error');
-      if (ExportDialog && typeof ExportDialog.notificarError === 'function') {
-        ExportDialog.notificarError('No se pudo copiar', error && error.message ? error.message : String(error));
-      }
+      notificarErrorDeAccion('No se pudo copiar', error && error.message ? error.message : String(error));
     }
   }
 
@@ -2005,9 +2068,7 @@
   async function ejecutarExportacionSeleccionada(seleccion) {
     const svg = ELEMENTOS.contenidoLienzo.querySelector('svg');
     if (!svg) {
-      if (ExportDialog && typeof ExportDialog.notificarError === 'function') {
-        ExportDialog.notificarError('Nada que exportar', 'Renderiza un diagrama antes de exportarlo.');
-      }
+      notificarErrorDeAccion('Nada que exportar', 'Renderiza un diagrama antes de exportarlo.');
       establecerEstadoRenderizado('No hay diagrama para exportar', 'error');
       return;
     }
@@ -2024,46 +2085,35 @@
       opcionesExportacion.marcaDeAgua = null;
     }
 
+    const formato = seleccion.formato;
+    const esPesada = formato === 'pdf' || (formato === 'png' && seleccion.factorEscala >= 3);
     let cargadorMostrado = false;
-    if (ExportDialog && typeof ExportDialog.mostrarCargador === 'function') {
-      const formato = seleccion.formato;
-      if (formato === 'pdf' || (formato === 'png' && seleccion.factorEscala >= 3)) {
-        ExportDialog.mostrarCargador('Generando archivo en alta resolución…', 'Renderizando capas vectoriales y escalando el lienzo…');
-        cargadorMostrado = true;
-      }
+    if (esPesada && Alerts && typeof Alerts.mostrarCargador === 'function') {
+      Alerts.mostrarCargador();
+      cargadorMostrado = true;
     }
 
     try {
-      if (seleccion.formato === 'svg') {
-        await Promise.resolve(Exporter.exportarComoSvg(svg, nombreBase, opcionesExportacion));
-        if (ExportDialog && typeof ExportDialog.notificarExito === 'function') {
-          ExportDialog.notificarExito('SVG exportado correctamente');
-        }
-      } else if (seleccion.formato === 'pdf') {
+      if (formato === 'svg') {
+        await Exporter.exportarComoSvg(svg, nombreBase, opcionesExportacion);
+        notificarExitoDeAccion('Archivo SVG descargado en ultra alta definición');
+      } else if (formato === 'pdf') {
         await Exporter.exportarComoPdf(svg, nombreBase, opcionesExportacion);
-        if (ExportDialog && typeof ExportDialog.notificarExito === 'function') {
-          ExportDialog.notificarExito('PDF exportado correctamente');
-        }
-      } else if (seleccion.formato === 'mmd') {
+        notificarExitoDeAccion('Archivo PDF descargado en ultra alta definición');
+      } else if (formato === 'mmd') {
         Exporter.exportarCodigoFuente(ELEMENTOS.editorCodigo.value, nombreBase);
-        if (ExportDialog && typeof ExportDialog.notificarExito === 'function') {
-          ExportDialog.notificarExito('Código fuente exportado');
-        }
+        notificarExitoDeAccion('Código fuente exportado (.mmd)');
       } else {
         await Exporter.exportarComoPng(svg, seleccion.factorEscala, nombreBase, opcionesExportacion);
-        if (ExportDialog && typeof ExportDialog.notificarExito === 'function') {
-          ExportDialog.notificarExito(`PNG ${seleccion.factorEscala}x exportado correctamente`);
-        }
+        notificarExitoDeAccion(`Archivo PNG ${seleccion.factorEscala}x descargado en ultra alta definición`);
       }
       establecerEstadoRenderizado('Exportación completada', 'exito');
     } catch (error) {
       establecerEstadoRenderizado('Error al exportar', 'error');
-      if (ExportDialog && typeof ExportDialog.notificarError === 'function') {
-        ExportDialog.notificarError('Error al exportar', error && error.message ? error.message : String(error));
-      }
+      notificarErrorDeAccion('Error al exportar', error && error.message ? error.message : String(error));
     } finally {
-      if (cargadorMostrado && ExportDialog && typeof ExportDialog.cerrarCargador === 'function') {
-        ExportDialog.cerrarCargador();
+      if (cargadorMostrado && Alerts && typeof Alerts.cerrarCargador === 'function') {
+        Alerts.cerrarCargador();
       }
     }
   }
@@ -2082,13 +2132,48 @@
       .join('');
   }
 
+  // ==========================================================================
+  // Enrutador simple (hash-based) para redirecciones/URLs mal formadas
+  // ==========================================================================
+  const RUTAS_VALIDAS = new Set(['', '#', '#editor', '#documentacion']);
+
+  function inicializarEnrutador() {
+    function manejarRuta() {
+      const hash = window.location.hash || '';
+      if (!RUTAS_VALIDAS.has(hash)) {
+        const hashLimpio = hash || '(vacío)';
+        if (Alerts && typeof Alerts.notificarAdvertencia === 'function') {
+          Alerts.notificarAdvertencia(
+            'Ruta no encontrada',
+            `La ruta "${hashLimpio}" no es válida. Se mantiene la vista actual.`
+          );
+        } else if (typeof window !== 'undefined' && window.Swal) {
+          window.Swal.fire({
+            icon: 'warning',
+            title: 'Ruta no encontrada',
+            text: `La ruta "${hashLimpio}" no es válida.`,
+            confirmButtonText: 'Aceptar'
+          });
+        }
+        try {
+          window.history.replaceState(null, '', window.location.pathname + window.location.search + '#');
+        } catch (e) {
+          // Ignorar errores de history API
+        }
+      }
+    }
+    window.addEventListener('hashchange', manejarRuta);
+    manejarRuta();
+  }
+
   // Los atajos de teclado se delegan por completo al módulo KeyboardShortcuts,
   // registrado en `registrarAtajosDeTeclado()` con el mapa de acciones.
 
   // Arranque.
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', iniciarAplicacion);
+    document.addEventListener('DOMContentLoaded', () => { iniciarAplicacion(); inicializarEnrutador(); });
   } else {
     iniciarAplicacion();
+    inicializarEnrutador();
   }
 })(window.OpenMermaidStudio = window.OpenMermaidStudio || {});

@@ -961,6 +961,8 @@ body {
 .insignia-metodo--local { background: rgba(13, 110, 253, 0.2); color: #4d9bff; }
 .insignia-metodo--style { background: rgba(111, 66, 193, 0.22); color: #b18cff; }
 .insignia-metodo--export { background: rgba(25, 135, 84, 0.22); color: #2fbf71; }
+.insignia-metodo--render { background: rgba(255, 193, 7, 0.2); color: #ffca2c; }
+.insignia-metodo--feedback { background: rgba(13, 202, 240, 0.2); color: #4dd0e1; }
 
 .nav-tabs-tecnicas {
   padding: 0 1.1rem;

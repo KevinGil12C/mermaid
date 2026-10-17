@@ -12,6 +12,12 @@ Sin servidor · Sin *build tools* · Sin inteligencia artificial · Privacidad t
 [![Mermaid 12](https://img.shields.io/badge/Mermaid-12-ff3670.svg)](#stack-tecnológico)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#contribuir)
 [![Sin IA](https://img.shields.io/badge/IA-0%25-8a2be2.svg)](#descripción)
+[![Font Awesome 6 Support](https://img.shields.io/badge/Font%20Awesome%206-Support-blue.svg)](#font-awesome)
+[![SweetAlert2 Integrated](https://img.shields.io/badge/SweetAlert2-Integrated-green.svg)](#feedback)
+[![Zero Backend](https://img.shields.io/badge/Zero%20Backend-Yes-lightgrey.svg)](#stack-tecnológico)
+[![Client-Side Only](https://img.shields.io/badge/Client--Side-Only-9cf.svg)](#stack-tecnológico)
+[![MIT License](https://img.shields.io/badge/MIT-License-brightgreen.svg)](./LICENSE)
+[![Production Ready](https://img.shields.io/badge/Production-Ready-success.svg)](#características)
 
 Cero instalación: abre `index.html` y empieza a diagramar.
 
@@ -70,6 +76,18 @@ El proyecto persigue tres objetivos:
 | Trazabilidad del resultado | Determinista | Depende del modelo |
 
 ---
+
+## Font Awesome dentro de diagramas
+
+OpenMermaid Studio soporta sintaxis Font Awesome 6 Free nativa (`fa:fa-*`, `fab:fa-*`, `fas:fa-*`, `far:fa-*`) en todos los tipos de diagrama soportados. 
+
+Ejemplos:
+- `id1["fa:fa-server Servidor Web"] --> id2["fa:fa-database Base de Datos Central"]`
+- `user["fab:fa-github Desarrollador"]`
+- `subgraph Infraestructura ["fa:fa-cloud Infra"] ... end`
+
+La visualización y las exportaciones PNG/PDF HiDPI incrustan glifos vectoriales para garantizar máxima nitidez sin cajas vacías.
+
 
 ## Características
 
@@ -142,6 +160,7 @@ flowchart TB
   subgraph Presentación
     APP["app.js<br/>orquestador de DOM, eventos y atajos"]
     UI["docs-viewer · keyboard-shortcuts · history-manager<br/>minimap · find-replace · export-dialog · canvas-viewport"]
+    FEEDBACK["alerts.js<br/>despachador central de SweetAlert2"]
   end
 
   subgraph Dominio
@@ -156,6 +175,8 @@ flowchart TB
 
   IDX --> APP
   APP --> UI
+  APP --> FEEDBACK
+  UI --> FEEDBACK
   APP --> CORE
   CORE --> COLOR
   CORE --> LS
@@ -178,9 +199,10 @@ su prueba por separado con `node` o `jsdom`.
 │   ├── templates.js           # Catálogo de 9 plantillas de diagramas
 │   ├── diagram-styler.js      # Inyección de %%{init}%%, orientación y classDef
 │   ├── file-system.js         # FileSystemManager (árbol + localStorage + historial)
-│   ├── mermaid-renderer.js    # Render, validación y normalización de errores
-│   ├── exporter.js            # SVG, PNG, PDF, .mmd, portapapeles y marca de agua
-│   ├── export-dialog.js       # Modal de exportación y avisos (SweetAlert2)
+│   ├── mermaid-renderer.js    # Render, validación, normalización y glifos Font Awesome
+│   ├── exporter.js            # SVG, PNG, PDF, .mmd, portapapeles, marca de agua y fuentes FA incrustadas
+│   ├── export-dialog.js       # Modal de exportación (delega los avisos en Alerts)
+│   ├── alerts.js              # Despachador central de SweetAlert2: toasts, cargadores y confirmaciones
 │   ├── docs-viewer.js         # Portal de documentación y métricas
 │   ├── keyboard-shortcuts.js  # Sistema centralizado de atajos y hoja de referencia
 │   ├── history-manager.js     # Panel de historial de versiones
@@ -318,9 +340,11 @@ legibilidad.
 | **Marca de agua** | Opcional: nombre del diagrama, autor y fecha en una píldora inferior derecha. |
 
 > **Nota técnica:** las etiquetas se renderizan como `<text>`/`<tspan>` nativos de SVG
-> (`htmlLabels: false`) y la rasterización neutraliza `<foreignObject>` e imágenes externas. Así se
-> evita que el lienzo quede «tainted» y `toBlob`/`toDataURL` funcionan incluso al abrir la aplicación
-> con el protocolo `file://`.
+> (`htmlLabels: false`), con los tokens `fa:fa-*` convertidos a glifos Font Awesome vía consulta
+> CSS de `::before` y cacheados en memoria. Para exportaciones PNG/PDF HiDPI, las webfonts
+> Font Awesome 6 Free (fa-solid-900, fa-regular-400, fa-brands-400) se incrustan en Base64
+> dentro del SVG (con fallback a CDN) antes de la rasterización, evitando la contaminación del
+> lienzo y garantizando máxima nitidez sin pixelación.
 
 ---
 
@@ -334,10 +358,11 @@ Todos los módulos exponen sus funciones a través de `window.OpenMermaidStudio`
 | Plantillas | `OpenMermaidStudio.Templates` | catálogo `CATALOGO_DE_PLANTILLAS` |
 | Estilizado | `OpenMermaidStudio.DiagramStyler` | `inyectarDirectivaInit`, `alternarOrientacionDeFlujo`, `inyectarClasesDeEstiloEnFlujo` |
 | Archivos | `OpenMermaidStudio.FileSystemManager` | gestión de árbol, guardado, versiones y respaldo |
-| Render | `OpenMermaidStudio.MermaidRenderer` | `intentarRenderizarDiagrama`, `normalizarSvgRenderizado` |
-| Exportación | `OpenMermaidStudio.Exporter` | `exportarSvgLimpio`, `exportarPngAltaResolucion`, `exportarPdfVectorial`, `copiarPngAlPortapapeles` |
-| Diálogo de exportación | `OpenMermaidStudio.ExportDialog` | `abrirDialogoDeExportacion`, `notificarExito`, `notificarError` |
-| Documentación | `OpenMermaidStudio.DocsViewer` | `inicializarVisorDeDocumentacion`, `refrescarMetricasDeAlmacenamiento` |
+| Render | `OpenMermaidStudio.MermaidRenderer` | `intentarRenderizarDiagrama`, `normalizarSvgRenderizado`, `verificarYRenderizarIconosFontAwesome` |
+| Exportación | `OpenMermaidStudio.Exporter` | `exportarComoSvg`, `exportarComoPng`, `exportarComoPdf`, `exportarCodigoFuente`, `copiarSvgAlPortapapeles`, `incrustarFuentesFontAwesomeEnSvg` |
+| Diálogo de exportación | `OpenMermaidStudio.ExportDialog` | `abrirDialogoDeExportacion`, `construirSeleccion` |
+| Avisos y confirmaciones | `OpenMermaidStudio.Alerts` | `mostrarCargador`, `cerrarCargador`, `notificarExito`, `notificarError`, `notificarErrorDeSintaxis`, `confirmarAccion`, `solicitarTexto` |
+| Documentación | `OpenMermaidStudio.DocsViewer` | `inicializarVisorDeDocumentacion`, `refrescarMetricasDeAlmacenamiento`, `cargarEjemploIconos` |
 | Atajos | `OpenMermaidStudio.KeyboardShortcuts` | `inicializarAtajosDeTeclado`, `CATALOGO_DE_ATAJOS` |
 | Historial | `OpenMermaidStudio.HistoryManager` | `inicializarGestorDeHistorial`, `abrirPanelDeHistorial` |
 | Minimapa | `OpenMermaidStudio.Minimap` | `inicializarMinimapa`, `actualizarMinimapa` |
