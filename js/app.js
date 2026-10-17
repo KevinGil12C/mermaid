@@ -237,6 +237,7 @@
     registrarEventosDeAtajos();
     registrarObservadorDeTamanoDelLienzo();
     registrarAtajosDeTeclado();
+    registrarEventosDeConexion();
   }
 
   /** Eventos del editor de código. */
@@ -894,6 +895,20 @@
     if (KeyboardShortcuts) {
       KeyboardShortcuts.abrirModalDeAtajosDeTeclado();
     }
+  }
+
+  /** Monitor de estado de conectividad (offline / online). */
+  function registrarEventosDeConexion() {
+    window.addEventListener('offline', () => {
+      if (Alerts && typeof Alerts.notificarAdvertencia === 'function') {
+        Alerts.notificarAdvertencia('Sin conexión a Internet: modo offline activado. Tus diagramas se guardan localmente.');
+      }
+    });
+    window.addEventListener('online', () => {
+      if (Alerts && typeof Alerts.notificarExito === 'function') {
+        Alerts.notificarExito('Conexión reestablecida.');
+      }
+    });
   }
 
   /** Restablece el zoom al 100 % manteniendo el centro. */
